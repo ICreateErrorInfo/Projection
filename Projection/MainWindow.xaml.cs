@@ -1,9 +1,6 @@
-﻿using Projection;
-using System;
-using System.Threading;
+﻿using System;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 
@@ -14,24 +11,26 @@ namespace Projection
     /// </summary>
     public partial class MainWindow : Window
     {
-        double angle1 = 0;
+        double _currentAngle;
         public MainWindow()
         {
             DispatcherTimer dispatcherTimer = new DispatcherTimer();
-            dispatcherTimer.Tick += new EventHandler(dispatcherTimer_Tick);
+            dispatcherTimer.Tick     += OnTick;
+            dispatcherTimer.Interval =  TimeSpan.FromMilliseconds(5);
             dispatcherTimer.Start();
 
             InitializeComponent();
         }
-        private void dispatcherTimer_Tick(object sender, EventArgs e)
+
+        private void OnTick(object sender, EventArgs e)
         {
             MainGrid.Children.Clear();
-            Draw.Update();
-            Project(angle1);
+            Draw.Clear();
+            Project(_currentAngle);
             MainGrid.Children.Add(Draw.MainGrid1);
-            Thread.Sleep(5);
-            angle1 += 0.1;
+            _currentAngle += 0.1;
         }
+
         public void Project(double angle)
         {
             Point3D[] points = new Point3D[8];
@@ -70,10 +69,10 @@ namespace Projection
             int i = 0;
             foreach (Point3D element in points)
             {
-                projectedPoints[i] = Matrix.mul2(projection, element);
-                projectedPoints[i] = Matrix.mul3(rotationY, projectedPoints[i]);
-                projectedPoints[i] = Matrix.mul3(rotationX, projectedPoints[i]);
-                projectedPoints[i] = Matrix.mul3(rotationZ, projectedPoints[i]);
+                projectedPoints[i] = Matrix.Mul2(projection, element);
+                projectedPoints[i] = Matrix.Mul3(rotationY, projectedPoints[i]);
+                projectedPoints[i] = Matrix.Mul3(rotationX, projectedPoints[i]);
+                projectedPoints[i] = Matrix.Mul3(rotationZ, projectedPoints[i]);
                 i++;
             }
 
@@ -120,7 +119,7 @@ class Point3D
 class Draw
 {
     public static Grid MainGrid1 = new Grid();
-    public static void Update()
+    public static void Clear()
     {
 
         MainGrid1 = new Grid();
@@ -132,8 +131,8 @@ class Draw
         objLine.Stroke = System.Windows.Media.Brushes.Black;
         objLine.Fill = System.Windows.Media.Brushes.Black;
 
-        double height = System.Windows.SystemParameters.PrimaryScreenHeight / 2;
-        double width = System.Windows.SystemParameters.PrimaryScreenWidth / 2;
+        double height = SystemParameters.PrimaryScreenHeight / 2;
+        double width = SystemParameters.PrimaryScreenWidth / 2;
 
         int indicador = 50;
 
@@ -149,7 +148,7 @@ class Draw
 }
 class Matrix
 {
-    public static Point3D mul2(double[,] a, Point3D b)
+    public static Point3D Mul2(double[,] a, Point3D b)
     {
         double ergebnis0 = a[0, 0] * b.X;
         ergebnis0 += a[0, 1] * b.Y;
@@ -162,7 +161,7 @@ class Matrix
         Point3D end = new Point3D(ergebnis0, ergebnis1, b.Z);
         return end;
     }
-    public static Point3D mul3(double[,] a, Point3D b)
+    public static Point3D Mul3(double[,] a, Point3D b)
     {
         double ergebnis0 = a[0, 0] * b.X;
         ergebnis0 += a[0, 1] * b.Y;
