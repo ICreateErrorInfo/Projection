@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 
@@ -11,15 +12,26 @@ namespace Projection
     /// </summary>
     public partial class MainWindow : Window
     {
-        double _currentAngle;
+        double                  _currentAngle;
+        private DispatcherTimer _timer;
         public MainWindow()
         {
-            DispatcherTimer dispatcherTimer = new DispatcherTimer();
-            dispatcherTimer.Tick     += OnTick;
-            dispatcherTimer.Interval =  TimeSpan.FromMilliseconds(5);
-            dispatcherTimer.Start();
+             _timer = new DispatcherTimer();
+            _timer.Tick     += OnTick;
+            _timer.Interval =  TimeSpan.FromMilliseconds(5);
+            _timer.Start();
 
             InitializeComponent();
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e) 
+        {
+            if (e.Key == Key.P) 
+            {
+                _timer.IsEnabled ^= true;
+                e.Handled        =  true;
+            }
+            base.OnKeyDown(e);
         }
 
         private void OnTick(object sender, EventArgs e)
