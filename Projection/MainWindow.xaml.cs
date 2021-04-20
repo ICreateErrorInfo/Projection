@@ -13,8 +13,8 @@ namespace Projection
     public partial class MainWindow : Window
     {
         double                  _currentAngle;
-        double _scale = 20;
-        double _distanceToObject = 6;
+        double _scale = 45;
+        double _distanceToObject = 10;
         private DispatcherTimer _timer;
         public MainWindow()
         {
