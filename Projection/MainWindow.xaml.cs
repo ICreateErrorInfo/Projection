@@ -13,6 +13,8 @@ namespace Projection
     public partial class MainWindow : Window
     {
         double                  _currentAngle;
+        double _scale = 20;
+        double _distanceToObject = 6;
         private DispatcherTimer _timer;
         public MainWindow()
         {
@@ -33,7 +35,6 @@ namespace Projection
             }
             base.OnKeyDown(e);
         }
-
         private void OnTick(object sender, EventArgs e)
         {
             MainGrid.Children.Clear();
@@ -42,16 +43,15 @@ namespace Projection
             MainGrid.Children.Add(Draw.MainGrid1);
             _currentAngle += 0.1;
         }
-
         public void Project(double angle)
         {
             Point3D[] points = new Point3D[8];
-            double[,] projection = { { 1, 0, 0 }, { 0, 1, 0 }};
+            
             double[,] rotationZ =
             {
             {Math.Round(Math.Cos(ToRad(angle)), 3), Math.Round(Math.Sin(ToRad(angle) * -1), 3), 0},
             {Math.Round(Math.Sin(ToRad(angle)), 3), Math.Round(Math.Cos(ToRad(angle)), 3), 0},
-                {0,0,0 }
+                {0,0,1 }
             };
 
             double[,] rotationX =
@@ -67,24 +67,37 @@ namespace Projection
             {Math.Round(Math.Sin(ToRad(angle)), 3),0, Math.Round(Math.Cos(ToRad(angle)), 3)},
             };
 
-            points[0] = new Point3D(-5,-5,-5);
-            points[1] = new Point3D(5, -5, -5);
-            points[2] = new Point3D(5, 5, -5);
-            points[3] = new Point3D(-5, 5, -5);
-            points[4] = new Point3D(-5, -5, 5);
-            points[5] = new Point3D(5, -5, 5);
-            points[6] = new Point3D(5, 5, 5);
-            points[7] = new Point3D(-5, 5, 5);
+            points[0] = new Point3D(-1,-1,-1);
+            points[1] = new Point3D(1, -1, -1);
+            points[2] = new Point3D(1, 1, -1);
+            points[3] = new Point3D(-1, 1, -1);
+            points[4] = new Point3D(-1, -1, 1);
+            points[5] = new Point3D(1, -1, 1);
+            points[6] = new Point3D(1, 1, 1);
+            points[7] = new Point3D(-1, 1, 1);
 
             Point3D[] projectedPoints = new Point3D[8];
 
             int i = 0;
             foreach (Point3D element in points)
             {
-                projectedPoints[i] = Matrix.Mul2(projection, element);
-                projectedPoints[i] = Matrix.Mul3(rotationY, projectedPoints[i]);
-                projectedPoints[i] = Matrix.Mul3(rotationX, projectedPoints[i]);
-                projectedPoints[i] = Matrix.Mul3(rotationZ, projectedPoints[i]);
+                Point3D rotated = Matrix.Mul3(rotationY, element);
+                rotated = Matrix.Mul3(rotationX, rotated);
+                rotated = Matrix.Mul3(rotationZ, rotated);
+
+                double z = 1 / (_distanceToObject - rotated.Z);
+
+                double[,] projection = { 
+
+                    { z, 0, 0 },
+                    { 0, z, 0 }
+                    
+                };
+
+                projectedPoints[i] = Matrix.Mul2(projection, rotated);
+                projectedPoints[i].X *= _scale;
+                projectedPoints[i].Y *= _scale;
+                projectedPoints[i].Z *= _scale;
                 i++;
             }
 
@@ -123,10 +136,9 @@ class Point3D
         Z = a.Z;
     }
 
-    public double X { get; }
-    public double Y { get; }
-    public double Z { get; }
-
+    public double X;
+    public double Y;
+    public double Z;
 }
 class Draw
 {
