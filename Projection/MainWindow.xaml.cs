@@ -112,7 +112,8 @@ namespace Projection
 
             foreach (Point3D element in points)
             {
-                projectedPoints[i] = PerspectiveProjection(element, cameraPos, cameraRotation, vecplane);
+                //projectedPoints[i] = PerspectiveProjection(element, cameraPos, cameraRotation, vecplane);
+                projectedPoints[i] = PerspectiveProjectionMatrix(element, cameraPos, cameraRotation, vecplane);
                 i++;
 
             }
@@ -155,6 +156,56 @@ namespace Projection
 
             double bx = (DispSurfPos.Z / dz) * dx + DispSurfPos.X;
             double by = (DispSurfPos.Z / dz) * dy + DispSurfPos.Y;
+
+            Point b = new Point(bx, by);
+            return b;
+
+        }
+        private Point PerspectiveProjectionMatrix(Point3D PosProjPoint, Point3D PosCamera, Point3D RotationCamera, Point3D DispSurfPos)
+        {
+            double cx = Calpha(RotationCamera.X);
+            double cy = Calpha(RotationCamera.Y);
+            double cz = Calpha(RotationCamera.Z);
+
+            double sx = Salpha(RotationCamera.X);
+            double sy = Salpha(RotationCamera.Y);
+            double sz = Salpha(RotationCamera.Z);
+
+            double x = xyz(PosProjPoint.X, PosCamera.X);
+            double y = xyz(PosProjPoint.Y, PosCamera.Y);
+            double z = xyz(PosProjPoint.Z, PosCamera.Z);
+
+            double[,] mat1 =
+            {
+                { 1, 0, 0},
+                { 0, cx, sx},
+                { 0, -sx, cx}
+            };
+            double[,] mat2 =
+            {
+                { cy, 0, -sy},
+                { 0, 1, 0},
+                { sy, 0, cy}
+            };
+            double[,] mat3 =
+            {
+                { cz, sz, 0},
+                { -sz, cz, 0},
+                { 0, 0, 1}
+            };
+            double[,] mat4 =
+            {
+                {x },
+                {y },
+                {z }
+            };
+
+            double[,] d = Matrix.MultiplyMatrix(mat1, mat2);
+            d = Matrix.MultiplyMatrix(d, mat3);
+            d = Matrix.MultiplyMatrix(d, mat4);
+
+            double bx = (DispSurfPos.Z / d[2, 0]) * d[0, 0] + DispSurfPos.X;
+            double by = (DispSurfPos.Z / d[2, 0]) * d[1, 0] + DispSurfPos.Y;
 
             Point b = new Point(bx, by);
             return b;
@@ -219,8 +270,8 @@ class DrawingSurface
         objLine.Fill = Brushes.Black;
 
         // Offset in x und y?
-        double height = 0; //Surface.ActualHeight / 2;
-        double width  = 0; //Surface.ActualWidth / 2;
+        double height = Surface.ActualHeight / 2;
+        double width  = Surface.ActualWidth / 2;
 
         int indicador = 50; // Skalierung?
 
@@ -240,35 +291,35 @@ class DrawingSurface
 }
 class Matrix
 {
-    public static Point Mul2(double[,] a, Point3D b)
+    public static double[,] MultiplyMatrix(double[,] A, double[,] B)
     {
-        double ergebnis0 = a[0, 0] * b.X;
-        ergebnis0 += a[0, 1] * b.Y;
-        ergebnis0 += a[0, 2] * b.Z;
-
-        double ergebnis1 = a[1, 0] * b.X;
-        ergebnis1 += a[1, 1] * b.Y;
-        ergebnis1 += a[1, 2] * b.Z;
-
-        Point end = new Point(ergebnis0, ergebnis1);
-        return end;
-    }
-    public static Point3D Mul3(double[,] a, Point3D b)
-    {
-        double ergebnis0 = a[0, 0] * b.X;
-        ergebnis0 += a[0, 1] * b.Y;
-        ergebnis0 += a[0, 2] * b.Z;
-
-        double ergebnis1 = a[1, 0] * b.X;
-        ergebnis1 += a[1, 1] * b.Y;
-        ergebnis1 += a[1, 2] * b.Z;
-
-        double ergebnis2 = a[2, 0] * b.X;
-        ergebnis2 += a[2, 1] * b.Y;
-        ergebnis2 += a[2, 2] * b.Z;
-
-        Point3D end = new Point3D(ergebnis0, ergebnis1, ergebnis2);
-        return end;
+        int rA = A.GetLength(0);
+        int cA = A.GetLength(1);
+        int rB = B.GetLength(0);
+        int cB = B.GetLength(1);
+        double temp = 0;
+        double[,] kHasil = new double[rA, cB];
+        if (cA != rB)
+        {
+            Console.WriteLine("matrik can't be multiplied !!");
+        }
+        else
+        {
+            for (int i = 0; i < rA; i++)
+            {
+                for (int j = 0; j < cB; j++)
+                {
+                    temp = 0;
+                    for (int k = 0; k < cA; k++)
+                    {
+                        temp += A[i, k] * B[k, j];
+                    }
+                    kHasil[i, j] = temp;
+                }
+            }
+            return kHasil;
+        }
+        return null;
     }
 }
 
