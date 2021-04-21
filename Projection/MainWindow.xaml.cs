@@ -13,18 +13,25 @@ namespace Projection
     /// </summary>
     public partial class MainWindow : Window
     {
-        double                  _currentAngle;
-        double _scale = 45;
+
+        double _currentAngle;
+        double _scale            = 45;
         double _distanceToObject = 10;
-        private DispatcherTimer _timer;
+
+        private readonly DispatcherTimer _timer;
+        private readonly DrawingSurface _drawingSurface;
+
         public MainWindow()
         {
-             _timer = new DispatcherTimer();
+            InitializeComponent();
+
+            _drawingSurface = new DrawingSurface();
+            MainGrid.Children.Add(_drawingSurface.Surface);
+
+            _timer          =  new DispatcherTimer();
             _timer.Tick     += OnTick;
             _timer.Interval =  TimeSpan.FromMilliseconds(5);
             _timer.Start();
-
-            InitializeComponent();
         }
 
         protected override void OnKeyDown(KeyEventArgs e) 
@@ -38,13 +45,10 @@ namespace Projection
         }
         private void OnTick(object sender, EventArgs e)
         {
-            MainGrid.Children.Clear();
-            Draw.Clear();
-            Project(_currentAngle);
-            MainGrid.Children.Add(Draw.MainGrid1);
-            _currentAngle += 0.1;
+            _drawingSurface.Clear();
+            Project(++_currentAngle);
         }
-        public void Project(double angle)
+        void Project(double angle)
         {
             Point3D[] points = new Point3D[8];
             
@@ -113,22 +117,22 @@ namespace Projection
 
             }
 
-            Draw.Line(projectedPoints[0], projectedPoints[1]);
-            Draw.Line(projectedPoints[2], projectedPoints[1]);
-            Draw.Line(projectedPoints[2], projectedPoints[3]);
-            Draw.Line(projectedPoints[0], projectedPoints[3]);
+            _drawingSurface.Line(projectedPoints[0], projectedPoints[1]);
+            _drawingSurface.Line(projectedPoints[2], projectedPoints[1]);
+            _drawingSurface.Line(projectedPoints[2], projectedPoints[3]);
+            _drawingSurface.Line(projectedPoints[0], projectedPoints[3]);
 
-            Draw.Line(projectedPoints[4], projectedPoints[5]);
-            Draw.Line(projectedPoints[5], projectedPoints[6]);
-            Draw.Line(projectedPoints[6], projectedPoints[7]);
-            Draw.Line(projectedPoints[4], projectedPoints[7]);
+            _drawingSurface.Line(projectedPoints[4], projectedPoints[5]);
+            _drawingSurface.Line(projectedPoints[5], projectedPoints[6]);
+            _drawingSurface.Line(projectedPoints[6], projectedPoints[7]);
+            _drawingSurface.Line(projectedPoints[4], projectedPoints[7]);
 
-            Draw.Line(projectedPoints[4], projectedPoints[0]);
-            Draw.Line(projectedPoints[5], projectedPoints[1]);
-            Draw.Line(projectedPoints[3], projectedPoints[7]);
-            Draw.Line(projectedPoints[6], projectedPoints[2]);
+            _drawingSurface.Line(projectedPoints[4], projectedPoints[0]);
+            _drawingSurface.Line(projectedPoints[5], projectedPoints[1]);
+            _drawingSurface.Line(projectedPoints[3], projectedPoints[7]);
+            _drawingSurface.Line(projectedPoints[6], projectedPoints[2]);
 
-            Draw.Rectangle(projectedPoints[4], projectedPoints[5], projectedPoints[6], projectedPoints[7]);
+            _drawingSurface.Rectangle(projectedPoints[4], projectedPoints[5], projectedPoints[6], projectedPoints[7]);
 
         }
         private Point PerspectiveProjection(Point3D PosProjPoint, Point3D PosCamera, Point3D RotationCamera, Point3D DispSurfPos)
@@ -191,25 +195,34 @@ class Point3D
     public double Y;
     public double Z;
 }
-class Draw
+class DrawingSurface
 {
-    public static Grid MainGrid1 = new Grid();
-    public static void Clear()
-    {
 
-        MainGrid1 = new Grid();
+    public DrawingSurface() 
+    {
+        Surface                       = new Canvas();
+        Surface.RenderTransformOrigin = new Point(0.5, 0.5);
+        Surface.RenderTransform       = new ScaleTransform(1, 1);
     }
-    public static void Line(Point x, Point y)
+
+    public Canvas Surface { get; }
+
+    public void Clear()
+    {
+        Surface.Children.Clear();
+    }
+    public  void Line(Point x, Point y)
     {
         Line objLine = new Line();
 
-        objLine.Stroke = System.Windows.Media.Brushes.Black;
-        objLine.Fill = System.Windows.Media.Brushes.Black;
+        objLine.Stroke = Brushes.Black;
+        objLine.Fill = Brushes.Black;
 
-        double height = SystemParameters.PrimaryScreenHeight / 2;
-        double width = SystemParameters.PrimaryScreenWidth / 2;
+        // Offset in x und y?
+        double height = 0; //Surface.ActualHeight / 2;
+        double width  = 0; //Surface.ActualWidth / 2;
 
-        int indicador = 50;
+        int indicador = 50; // Skalierung?
 
         objLine.X1 = (x.X * indicador) + width;
         objLine.Y1 = (x.Y * indicador) + height;
@@ -218,9 +231,9 @@ class Draw
         objLine.Y2 = (y.Y * indicador) + height;
 
 
-        MainGrid1.Children.Add(objLine);
+        Surface.Children.Add(objLine);
     }
-    public static void Rectangle(Point p1, Point p2, Point p3, Point p4)
+    public void Rectangle(Point p1, Point p2, Point p3, Point p4)
     {
        
     }
