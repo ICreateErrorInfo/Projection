@@ -2,6 +2,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 
@@ -76,10 +77,10 @@ namespace Projection
             points[6] = new Point3D(1, 1, 1);
             points[7] = new Point3D(-1, 1, 1);
 
-            Point3D[] projectedPoints = new Point3D[8];
+            Point[] projectedPoints = new Point[8];
 
             int i = 0;
-            foreach (Point3D element in points)
+            /*foreach (Point3D element in points)
             {
                 Point3D rotated = Matrix.Mul3(rotationY, element);
                 rotated = Matrix.Mul3(rotationX, rotated);
@@ -97,8 +98,19 @@ namespace Projection
                 projectedPoints[i] = Matrix.Mul2(projection, rotated);
                 projectedPoints[i].X *= _scale;
                 projectedPoints[i].Y *= _scale;
-                projectedPoints[i].Z *= _scale;
                 i++;
+            }*/
+
+            Point3D cameraRotation = new Point3D(62, 0, -206);
+            Point3D cameraPos = new Point3D(2, 4, 2);
+
+            Point3D vecplane = new Point3D(6, 6, 6);
+
+            foreach (Point3D element in points)
+            {
+                projectedPoints[i] = PerspectiveProjection(element, cameraPos, cameraRotation, vecplane);
+                i++;
+
             }
 
             Draw.Line(projectedPoints[0], projectedPoints[1]);
@@ -116,13 +128,52 @@ namespace Projection
             Draw.Line(projectedPoints[3], projectedPoints[7]);
             Draw.Line(projectedPoints[6], projectedPoints[2]);
 
+            Draw.Rectangle(projectedPoints[4], projectedPoints[5], projectedPoints[6], projectedPoints[7]);
+
+        }
+        private Point PerspectiveProjection(Point3D PosProjPoint, Point3D PosCamera, Point3D RotationCamera, Point3D DispSurfPos)
+        {
+            double cx = Calpha(RotationCamera.X);
+            double cy = Calpha(RotationCamera.Y);
+            double cz = Calpha(RotationCamera.Z);
+
+            double sx = Salpha(RotationCamera.X);
+            double sy = Salpha(RotationCamera.Y);
+            double sz = Salpha(RotationCamera.Z);
+
+            double x = xyz(PosProjPoint.X, PosCamera.X);
+            double y = xyz(PosProjPoint.Y, PosCamera.Y);
+            double z = xyz(PosProjPoint.Z, PosCamera.Z);
+
+            double dx = cy * (sz * y + cz * x) - sy * z;
+            double dy = sx * (cy * z + sy * (sz * y + cz * x)) + cx * (cz * y - sz * x);
+            double dz = cx * (cy * z + sy * (sz * y + cz * x)) - sx * (cz * y - sz * x);
+
+            double bx = (DispSurfPos.Z / dz) * dx + DispSurfPos.X;
+            double by = (DispSurfPos.Z / dz) * dy + DispSurfPos.Y;
+
+            Point b = new Point(bx, by);
+            return b;
+
+        }
+        public double Calpha(double alpha)
+        {
+            return Math.Round(Math.Cos(ToRad(alpha)), 3);
+        }
+        public double Salpha(double alpha)
+        {
+            return Math.Round(Math.Sin(ToRad(alpha)), 3);
+        }
+        public double xyz(double xyz, double xyz1)
+        {
+            return xyz - xyz1;
         }
         public static double ToRad(double deg) => deg * Math.PI / 180;
     }
 }
 class Point3D
 {
-    public Point3D(double x, double y, double z)
+    public  Point3D(double x, double y, double z)
     {
         X = x;
         Y = y;
@@ -148,7 +199,7 @@ class Draw
 
         MainGrid1 = new Grid();
     }
-    public static void Line(Point3D x, Point3D y)
+    public static void Line(Point x, Point y)
     {
         Line objLine = new Line();
 
@@ -169,10 +220,14 @@ class Draw
 
         MainGrid1.Children.Add(objLine);
     }
+    public static void Rectangle(Point p1, Point p2, Point p3, Point p4)
+    {
+       
+    }
 }
 class Matrix
 {
-    public static Point3D Mul2(double[,] a, Point3D b)
+    public static Point Mul2(double[,] a, Point3D b)
     {
         double ergebnis0 = a[0, 0] * b.X;
         ergebnis0 += a[0, 1] * b.Y;
@@ -182,7 +237,7 @@ class Matrix
         ergebnis1 += a[1, 1] * b.Y;
         ergebnis1 += a[1, 2] * b.Z;
 
-        Point3D end = new Point3D(ergebnis0, ergebnis1, b.Z);
+        Point end = new Point(ergebnis0, ergebnis1);
         return end;
     }
     public static Point3D Mul3(double[,] a, Point3D b)
