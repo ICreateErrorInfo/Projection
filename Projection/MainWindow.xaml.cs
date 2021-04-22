@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -15,6 +17,7 @@ namespace Projection
     {
 
         double _currentAngle;
+        List<Triangle> triangles = new List<Triangle>();
 
         private readonly DispatcherTimer _timer;
         private readonly DrawingSurface _drawingSurface;
@@ -25,6 +28,7 @@ namespace Projection
 
             _drawingSurface = new DrawingSurface();
             MainGrid.Children.Add(_drawingSurface.Surface);
+
 
             _timer          =  new DispatcherTimer();
             _timer.Tick     += OnTick;
@@ -47,16 +51,13 @@ namespace Projection
             Project(++_currentAngle);
         }
         void Project(double angle)
-        {
-            Point3D[] points = new Point3D[8];
-            
+        {         
             double[,] rotationZ =
             {
             {Math.Round(Math.Cos(ToRad(angle)), 3), Math.Round(Math.Sin(ToRad(angle) * -1), 3), 0},
             {Math.Round(Math.Sin(ToRad(angle)), 3), Math.Round(Math.Cos(ToRad(angle)), 3), 0},
                 {0,0,1 }
             };
-
             double[,] rotationX =
             {
                 {1,0,0 },
@@ -70,86 +71,175 @@ namespace Projection
             {Math.Round(Math.Sin(ToRad(angle)), 3),0, Math.Round(Math.Cos(ToRad(angle)), 3)},
             };
 
-            points[0] = new Point3D(-1, -1, -5);  
-            points[1] = new Point3D(1, -1, -5);
-            points[2] = new Point3D(1, 1, -5);
-            points[3] = new Point3D(-1, 1, -5);
-            points[4] = new Point3D(-1, -1, -7);
-            points[5] = new Point3D(1, -1, -7);
-            points[6] = new Point3D(1, 1, -7);
-            points[7] = new Point3D(-1, 1, -7);
+            Point3D[] points = new Point3D[8];
 
-            Point[] projectedPoints = new Point[8];
+            points[0] = new Point3D(-1, -1, -1);  
+            points[1] = new Point3D(1, -1, -1);
+            points[2] = new Point3D(1, -1, 1);
+            points[3] = new Point3D(-1, -1, 1);
+            points[4] = new Point3D(-1, 1, -1);
+            points[5] = new Point3D(1, 1, -1);
+            points[6] = new Point3D(1, 1, 1);   
+            points[7] = new Point3D(-1, 1, 1);
 
-            int i = 0;
-
-            foreach (Point3D element in points)
+            int z = 0;
+            foreach(Point3D element in points)
             {
-                projectedPoints[i] = PerspectiveProjectionMatrix1(element);
-                i++;
+                double[,] inputAsMatrix=
+                {
+                    {element.X },
+                    {element.Y },
+                    {element.Z }
+                };
+                double[,] MatrixErgebnis = Matrix.MultiplyMatrix(rotationX, inputAsMatrix);
+                MatrixErgebnis = Matrix.MultiplyMatrix(rotationY, MatrixErgebnis);
 
+                Point3D erg = new Point3D(MatrixErgebnis[0,0], MatrixErgebnis[1,0], MatrixErgebnis[2,0]);
+
+
+                points[z] = erg;
+                
+                z++;
+            }
+            z = 0;
+            foreach(Point3D element in points)
+            {
+                element.Z -= 4;
+                points[z] = element;
+                z++;
             }
 
-            _drawingSurface.Line(projectedPoints[0], projectedPoints[1]);
-            _drawingSurface.Line(projectedPoints[2], projectedPoints[1]);
-            _drawingSurface.Line(projectedPoints[2], projectedPoints[3]);
-            _drawingSurface.Line(projectedPoints[0], projectedPoints[3]);
+            triangles.Clear();
 
-            _drawingSurface.Line(projectedPoints[4], projectedPoints[5]);
-            _drawingSurface.Line(projectedPoints[5], projectedPoints[6]);
-            _drawingSurface.Line(projectedPoints[6], projectedPoints[7]);
-            _drawingSurface.Line(projectedPoints[4], projectedPoints[7]);
+            InitTriangles(points);
 
-            _drawingSurface.Line(projectedPoints[4], projectedPoints[0]);
-            _drawingSurface.Line(projectedPoints[5], projectedPoints[1]);
-            _drawingSurface.Line(projectedPoints[3], projectedPoints[7]);
-            _drawingSurface.Line(projectedPoints[6], projectedPoints[2]);
+            Triangle[] projectedTriangles = new Triangle[triangles.Count];
 
-            _drawingSurface.Rectangle(projectedPoints[4], projectedPoints[5], projectedPoints[6], projectedPoints[7]);
+            int i = 0;
+            foreach (Triangle element in triangles)
+            {
+                Point3D line1 = new Point3D();
+                line1.X = element.tp3.X - element.tp2.X;
+                line1.Y = element.tp3.Y - element.tp2.Y;
+                line1.Z = element.tp3.Z - element.tp2.Z;
+
+                Point3D line2 = new Point3D();
+                line2.X = element.tp1.X - element.tp2.X;    
+                line2.Y = element.tp1.Y - element.tp2.Y;
+                line2.Z = element.tp1.Z - element.tp2.Z;
+
+                Point3D normal = new Point3D();
+                normal.X = line2.Y * line1.Z - line2.Z * line1.Y;
+                normal.Y = line2.Z * line1.X - line2.X * line1.Z;
+                normal.Z = line2.X * line1.Y - line2.Y * line1.X;
+
+                double l = Math.Sqrt(normal.X * normal.X + normal.Y * normal.Y + normal.Z * normal.Z);
+
+                normal.X /= l;
+                normal.Y /= l;
+                normal.Z /= l;
+
+                if(normal.Z > 0)
+                {
+                        projectedTriangles[i] = PerspectiveProjectionMatrix(element);
+
+                }
+                i++;
+            }
+            viewTriangles(projectedTriangles);
 
         }
-        private Point PerspectiveProjectionMatrix1(Point3D input)
+        private Triangle PerspectiveProjectionMatrix(Triangle input)
         {
+            List<Point3D> pointList = new List<Point3D>();
+
+            List<Point3D> inputPointList = new List<Point3D>();
+            inputPointList.Add(input.tp1);
+            inputPointList.Add(input.tp2);
+            inputPointList.Add(input.tp3);
+
             double Fov = 90;
             double near = .1;
             double far = 100;
             double w = 1;
 
             double aspectRation = 1920 / 1080; // auflösung Bildschirm
-
-            double Rechnung2 = 1 / Math.Round(Math.Tan(ToRad(Fov / 2)), 3);
-            double Rechnung1 = aspectRation * (Rechnung2);
-            double Rechnung3 = far / (far - near);
-            double Rechnung4 = (-far * near) / (far - near);
-
-            double[,] matrix =
+            for(int i = 0; i < 3; i++)
             {
+                double Rechnung2 = 1 / Math.Round(Math.Tan(ToRad(Fov / 2)), 3);
+                double Rechnung1 = aspectRation * (Rechnung2);
+                double Rechnung3 = far / (far - near);
+                double Rechnung4 = (-far * near) / (far - near);
+
+                double[,] matrix =
+                {
                 {Rechnung1, 0, 0, 0},
                 {0, Rechnung2, 0, 0},
                 {0, 0, Rechnung3, 1},
                 {0, 0, Rechnung4, 0}
             };
 
-            double[,] inputMatrix =
-            {
-                {input.X },
-                {input.Y },
-                {input.Z },
+                double[,] inputMatrix =
+                {
+                {inputPointList[i].X },
+                {inputPointList[i].Y },
+                {inputPointList[i].Z },
                 {w },
             };
 
-            double[,] ergebnis = Matrix.MultiplyMatrix(matrix, inputMatrix);
-            double bx = ergebnis[0,0];
-            double by = ergebnis[1,0];
+                double[,] ergebnis = Matrix.MultiplyMatrix(matrix, inputMatrix);
+                double bx = ergebnis[0, 0];
+                double by = ergebnis[1, 0];
 
-            if (w != 0)
+                if (w != 0)
+                {
+                    bx = ergebnis[0, 0] / ergebnis[3, 0];
+                    by = ergebnis[1, 0] / ergebnis[3, 0];
+                }
+                pointList.Add(new Point3D(bx, by , 0));
+            }
+            return new Triangle(pointList[0], pointList[1], pointList[2]);
+
+        }
+        private void InitTriangles(Point3D[] projectedPoints)
+        {
+            Triangle t1 = new Triangle(projectedPoints[0], projectedPoints[3], projectedPoints[2]);
+            Triangle t2 = new Triangle(projectedPoints[2], projectedPoints[1], projectedPoints[0]);
+
+            Triangle t3 = new Triangle(projectedPoints[4], projectedPoints[5], projectedPoints[6]);
+            Triangle t4 = new Triangle(projectedPoints[6], projectedPoints[7], projectedPoints[4]);
+
+            Triangle t5 = new Triangle(projectedPoints[3], projectedPoints[7], projectedPoints[6]);
+            Triangle t6 = new Triangle(projectedPoints[6], projectedPoints[2], projectedPoints[3]);
+
+            Triangle t7 = new Triangle(projectedPoints[0], projectedPoints[1], projectedPoints[5]);
+            Triangle t8 = new Triangle(projectedPoints[5], projectedPoints[4], projectedPoints[0]);
+
+            Triangle t9 = new Triangle(projectedPoints[5], projectedPoints[1], projectedPoints[2]);
+            Triangle t10 = new Triangle(projectedPoints[2], projectedPoints[6], projectedPoints[5]);
+
+            Triangle t11 = new Triangle(projectedPoints[0], projectedPoints[4], projectedPoints[7]);
+            Triangle t12 = new Triangle(projectedPoints[7], projectedPoints[3], projectedPoints[0]);
+
+            triangles.Add(t1);
+            triangles.Add(t2);
+            triangles.Add(t3);
+            triangles.Add(t4);
+            triangles.Add(t5);
+            triangles.Add(t6);
+            triangles.Add(t7);
+            triangles.Add(t8);
+            triangles.Add(t9);
+            triangles.Add(t10);
+            triangles.Add(t11);
+            triangles.Add(t12);
+        }
+        private void viewTriangles(Triangle[] triarr)
+        {
+            foreach(Triangle tri in triarr)
             {
-                bx = ergebnis[0, 0] / ergebnis[3, 0];
-                by = ergebnis[1, 0] / ergebnis[3, 0];
-            }        
-
-            return new Point(bx, by);
-
+                _drawingSurface.Triangle(tri);
+            }
         }
         public static double ToRad(double deg) => deg * Math.PI / 180;
     }
@@ -169,10 +259,26 @@ class Point3D
         Y = a.Y;
         Z = a.Z;
     }
+    public Point3D()
+    {
+    }
 
     public double X;
     public double Y;
     public double Z;
+}
+class Triangle
+{
+    public Triangle(Point3D p1, Point3D p2, Point3D p3)
+    {
+        tp1 = p1;
+        tp2 = p2;
+        tp3 = p3;
+    }
+
+    public Point3D tp1;
+    public Point3D tp2;
+    public Point3D tp3;
 }
 class DrawingSurface
 {
@@ -198,11 +304,10 @@ class DrawingSurface
         objLine.Stroke = Brushes.Black;
         objLine.Fill = Brushes.Black;
 
-        // Offset in x und y?
         double height = Surface.ActualHeight / 2;
         double width  = Surface.ActualWidth / 2;
 
-        int indicador = 50; // Skalierung?
+        int indicador = 50; // Skalierung
 
         objLine.X1 = (x.X * indicador) + width;
         objLine.Y1 = (x.Y * indicador) + height;
@@ -213,9 +318,18 @@ class DrawingSurface
 
         Surface.Children.Add(objLine);
     }
-    public void Rectangle(Point p1, Point p2, Point p3, Point p4)
+    public void Triangle(Triangle tri)
     {
-       
+        if(tri != null)
+        {
+            Point p1 = new Point(tri.tp1.X, tri.tp1.Y);
+            Point p2 = new Point(tri.tp2.X, tri.tp2.Y);
+            Point p3 = new Point(tri.tp3.X, tri.tp3.Y);
+
+            Line(p1, p2);
+            Line(p2, p3);
+            //Line(p1, p3);
+        }
     }
 }
 class Matrix
