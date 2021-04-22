@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Text;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
@@ -16,8 +19,9 @@ namespace Projection
     public partial class MainWindow : Window
     {
 
-        double _currentAngle;
-        List<Triangle> triangles = new List<Triangle>();
+        double _currentAngle = 1;
+        double abstand = 6;
+        Point3D Camera = new Point3D(0,0,0);
 
         private readonly DispatcherTimer _timer;
         private readonly DrawingSurface _drawingSurface;
@@ -28,11 +32,12 @@ namespace Projection
 
             _drawingSurface = new DrawingSurface();
             MainGrid.Children.Add(_drawingSurface.Surface);
+            Load.obj("C:/Users/Moritz/Desktop/test.obj");
 
 
             _timer          =  new DispatcherTimer();
             _timer.Tick     += OnTick;
-            _timer.Interval =  TimeSpan.FromMilliseconds(5);
+            _timer.Interval =  TimeSpan.FromMilliseconds(15);
             _timer.Start();
         }
 
@@ -48,90 +53,63 @@ namespace Projection
         private void OnTick(object sender, EventArgs e)
         {
             _drawingSurface.Clear();
-            Project(++_currentAngle);
+            Project(_currentAngle);
+            
         }
         void Project(double angle)
-        {         
-            double[,] rotationZ =
-            {
-            {Math.Round(Math.Cos(ToRad(angle)), 3), Math.Round(Math.Sin(ToRad(angle) * -1), 3), 0},
-            {Math.Round(Math.Sin(ToRad(angle)), 3), Math.Round(Math.Cos(ToRad(angle)), 3), 0},
-                {0,0,1 }
-            };
-            double[,] rotationX =
-            {
-                {1,0,0 },
-            {0, Math.Round(Math.Cos(ToRad(angle)), 3), Math.Round(Math.Sin(ToRad(angle) * -1), 3)},
-            {0, Math.Round(Math.Sin(ToRad(angle)), 3), Math.Round(Math.Cos(ToRad(angle)), 3)},
-            };
-            double[,] rotationY =
-            {
-                {Math.Round(Math.Cos(ToRad(angle)), 3),0, Math.Round(Math.Sin(ToRad(angle) * -1), 3)},
-            {0, 1, 0},
-            {Math.Round(Math.Sin(ToRad(angle)), 3),0, Math.Round(Math.Cos(ToRad(angle)), 3)},
-            };
+        {
 
-            Point3D[] points = new Point3D[8];
-
-            points[0] = new Point3D(-1, -1, -1);  
-            points[1] = new Point3D(1, -1, -1);
-            points[2] = new Point3D(1, -1, 1);
-            points[3] = new Point3D(-1, -1, 1);
-            points[4] = new Point3D(-1, 1, -1);
-            points[5] = new Point3D(1, 1, -1);
-            points[6] = new Point3D(1, 1, 1);   
-            points[7] = new Point3D(-1, 1, 1);
-
-            int z = 0;
-            foreach(Point3D element in points)
+            Load.importedTriangles.Clear();
+            //Rotate
+            for (int j = 0; j < Load.verts.Count; j++)
             {
-                double[,] inputAsMatrix=
-                {
+                Point3D element = Load.verts[j];
+
+               double[,] inputAsMatrix =
+               {
                     {element.X },
                     {element.Y },
                     {element.Z }
                 };
-                double[,] MatrixErgebnis = Matrix.MultiplyMatrix(rotationX, inputAsMatrix);
-                MatrixErgebnis = Matrix.MultiplyMatrix(rotationY, MatrixErgebnis);
+                double[,] MatrixErgebnis = Matrix.MultiplyMatrix(Rotate.x(angle), inputAsMatrix);
+                MatrixErgebnis = Matrix.MultiplyMatrix(Rotate.y(angle), MatrixErgebnis);
+                MatrixErgebnis = Matrix.MultiplyMatrix(Rotate.z(angle), MatrixErgebnis);
 
-                Point3D erg = new Point3D(MatrixErgebnis[0,0], MatrixErgebnis[1,0], MatrixErgebnis[2,0]);
+                Point3D erg = new Point3D(MatrixErgebnis[0, 0], MatrixErgebnis[1, 0], MatrixErgebnis[2, 0]);
+                Load.verts[j] = erg;
 
-
-                points[z] = erg;
-                
-                z++;
             }
-            z = 0;
-            foreach(Point3D element in points)
+
+            //verschibt alle punkte
+            for (int t = 0; t < Load.verts.Count; t++)
             {
-                element.Z -= 4;
-                points[z] = element;
-                z++;
+                Point3D element = Load.verts[t];
+
+                element.Z -= abstand;
+                Load.verts[t] = element;
             }
 
-            triangles.Clear();
+            Load.createTriangles();
 
-            InitTriangles(points);
-
-            Triangle[] projectedTriangles = new Triangle[triangles.Count];
+            Triangle[] projectedTriangles = new Triangle[Load.importedTriangles.Count];
 
             int i = 0;
-            foreach (Triangle element in triangles)
+            foreach (Triangle element in Load.importedTriangles)
             {
-                Point3D line1 = new Point3D();
-                line1.X = element.tp3.X - element.tp2.X;
-                line1.Y = element.tp3.Y - element.tp2.Y;
-                line1.Z = element.tp3.Z - element.tp2.Z;
+                Vektor line1 = new Vektor();
+                line1.X = element.tp1.X - element.tp2.X;
+                line1.Y = element.tp1.Y - element.tp2.Y;
+                line1.Z = element.tp1.Z - element.tp2.Z;
 
-                Point3D line2 = new Point3D();
-                line2.X = element.tp1.X - element.tp2.X;    
-                line2.Y = element.tp1.Y - element.tp2.Y;
-                line2.Z = element.tp1.Z - element.tp2.Z;
+                Vektor line2 = new Vektor();
+                line2.X = element.tp3.X - element.tp2.X;    
+                line2.Y = element.tp3.Y - element.tp2.Y;
+                line2.Z = element.tp3.Z - element.tp2.Z;
 
-                Point3D normal = new Point3D();
-                normal.X = line2.Y * line1.Z - line2.Z * line1.Y;
-                normal.Y = line2.Z * line1.X - line2.X * line1.Z;
-                normal.Z = line2.X * line1.Y - line2.Y * line1.X;
+                Vektor normal = new Vektor();
+                normal.X = line1.Y * line2.Z - line1.Z * line2.Y;
+                normal.Y = line1.Z * line2.X - line1.X * line2.Z;
+                normal.Z = line1.X * line2.Y - line1.Y * line2.X;
 
                 double l = Math.Sqrt(normal.X * normal.X + normal.Y * normal.Y + normal.Z * normal.Z);
 
@@ -139,7 +117,9 @@ namespace Projection
                 normal.Y /= l;
                 normal.Z /= l;
 
-                if(normal.Z > 0)
+                if(normal.X * (element.tp2.X - Camera.X) +
+                    normal.Y * (element.tp2.Y - Camera.Y)+
+                    normal.Z * (element.tp2.Z - Camera.Z) > 0)
                 {
                         projectedTriangles[i] = PerspectiveProjectionMatrix(element);
 
@@ -147,6 +127,14 @@ namespace Projection
                 i++;
             }
             viewTriangles(projectedTriangles);
+
+            for (int t = 0; t < Load.verts.Count; t++)
+            {
+                Point3D element = Load.verts[t];
+
+                element.Z += abstand;
+                Load.verts[t] = element;
+            }
 
         }
         private Triangle PerspectiveProjectionMatrix(Triangle input)
@@ -201,39 +189,6 @@ namespace Projection
             return new Triangle(pointList[0], pointList[1], pointList[2]);
 
         }
-        private void InitTriangles(Point3D[] projectedPoints)
-        {
-            Triangle t1 = new Triangle(projectedPoints[0], projectedPoints[3], projectedPoints[2]);
-            Triangle t2 = new Triangle(projectedPoints[2], projectedPoints[1], projectedPoints[0]);
-
-            Triangle t3 = new Triangle(projectedPoints[4], projectedPoints[5], projectedPoints[6]);
-            Triangle t4 = new Triangle(projectedPoints[6], projectedPoints[7], projectedPoints[4]);
-
-            Triangle t5 = new Triangle(projectedPoints[3], projectedPoints[7], projectedPoints[6]);
-            Triangle t6 = new Triangle(projectedPoints[6], projectedPoints[2], projectedPoints[3]);
-
-            Triangle t7 = new Triangle(projectedPoints[0], projectedPoints[1], projectedPoints[5]);
-            Triangle t8 = new Triangle(projectedPoints[5], projectedPoints[4], projectedPoints[0]);
-
-            Triangle t9 = new Triangle(projectedPoints[5], projectedPoints[1], projectedPoints[2]);
-            Triangle t10 = new Triangle(projectedPoints[2], projectedPoints[6], projectedPoints[5]);
-
-            Triangle t11 = new Triangle(projectedPoints[0], projectedPoints[4], projectedPoints[7]);
-            Triangle t12 = new Triangle(projectedPoints[7], projectedPoints[3], projectedPoints[0]);
-
-            triangles.Add(t1);
-            triangles.Add(t2);
-            triangles.Add(t3);
-            triangles.Add(t4);
-            triangles.Add(t5);
-            triangles.Add(t6);
-            triangles.Add(t7);
-            triangles.Add(t8);
-            triangles.Add(t9);
-            triangles.Add(t10);
-            triangles.Add(t11);
-            triangles.Add(t12);
-        }
         private void viewTriangles(Triangle[] triarr)
         {
             foreach(Triangle tri in triarr)
@@ -242,6 +197,57 @@ namespace Projection
             }
         }
         public static double ToRad(double deg) => deg * Math.PI / 180;
+    }
+}
+class Load
+{
+    public static List<Point3D> verts= new List<Point3D>();
+    public static List<Triangle> importedTriangles = new List<Triangle>();
+    static List<string> stringList = new List<string>();
+    public static void obj(string filename)
+    {
+        importedTriangles.Clear();
+        verts.Clear();
+        
+
+        foreach (var myString in File.ReadAllLines(filename))
+        {
+            stringList.Add(myString);
+        }
+
+        int i = 0;
+        foreach(var element in stringList)
+        {
+            if(i > 1)
+            {
+                string[] zeile = element.Split(' ');
+
+                if(zeile[0] == "v")
+                {
+                    NumberFormatInfo provider = new NumberFormatInfo();
+                    provider.NumberDecimalSeparator = ".";
+                    verts.Add(new Point3D(Convert.ToDouble(zeile[1], provider), Convert.ToDouble(zeile[2], provider), Convert.ToDouble(zeile[3], provider)));
+                }
+            }
+            i++;
+        }       
+    }
+    public static void createTriangles()
+    {
+        int i = 0;
+        foreach (var element in stringList)
+        {
+            if (i > 2)
+            {
+                string[] zeile = element.Split(' ');
+
+                if (zeile[0] == "f")
+                {
+                    importedTriangles.Add(new Triangle(verts[Convert.ToInt32(zeile[1]) - 1], verts[Convert.ToInt32(zeile[2]) - 1], verts[Convert.ToInt32(zeile[3]) - 1]));
+                }
+            }
+            i++;
+        }
     }
 }
 class Point3D
@@ -260,6 +266,58 @@ class Point3D
         Z = a.Z;
     }
     public Point3D()
+    {
+    }
+
+    public double X;
+    public double Y;
+    public double Z;
+}
+public class Rotate
+{
+    public static double[,] x(double angle)
+    {
+        double[,] rotationX =
+            {
+            {1,0,0 },
+            {0, Math.Round(Math.Cos(Projection.MainWindow.ToRad(angle)), 3), Math.Round(Math.Sin(Projection.MainWindow.ToRad(angle) * -1), 3)},
+            {0, Math.Round(Math.Sin(Projection.MainWindow.ToRad(angle)), 3), Math.Round(Math.Cos(Projection.MainWindow.ToRad(angle)), 3)},
+            };
+
+        return rotationX;
+    }
+    public static double[,] y(double angle)
+    {
+        double[,] rotationY =
+            {
+            {Math.Round(Math.Cos(Projection.MainWindow.ToRad(angle)), 3),0, Math.Round(Math.Sin(Projection.MainWindow.ToRad(angle) * -1), 3)},
+            {0, 1, 0},
+            {Math.Round(Math.Sin(Projection.MainWindow.ToRad(angle)), 3),0, Math.Round(Math.Cos(Projection.MainWindow.ToRad(angle)), 3)},
+            };
+
+        return rotationY;
+    }
+    public static double[,] z(double angle)
+    {
+        double[,] rotationZ =
+            {
+            {Math.Round(Math.Cos(Projection.MainWindow.ToRad(angle)), 3), Math.Round(Math.Sin(Projection.MainWindow.ToRad(angle) * -1), 3), 0},
+            {Math.Round(Math.Sin(Projection.MainWindow.ToRad(angle)), 3), Math.Round(Math.Cos(Projection.MainWindow.ToRad(angle)), 3), 0},
+            {0,0,1 }
+            };
+
+        return rotationZ;
+    }
+}
+class Vektor
+{
+    public Vektor(double x, double y, double z)
+    {
+        X = x;
+        Y = y;
+        Z = z;
+    }
+    public Vektor()
     {
     }
 
@@ -315,6 +373,7 @@ class DrawingSurface
         objLine.X2 = (y.X * indicador) + width;
         objLine.Y2 = (y.Y * indicador) + height;
 
+        objLine.StrokeThickness = 1;
 
         Surface.Children.Add(objLine);
     }
@@ -328,7 +387,7 @@ class DrawingSurface
 
             Line(p1, p2);
             Line(p2, p3);
-            //Line(p1, p3);
+            Line(p1, p3);
         }
     }
 }
