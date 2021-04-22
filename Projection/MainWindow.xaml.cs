@@ -357,26 +357,23 @@ class DrawingSurface
     }
     public  void Line(Point x, Point y)
     {
-        Line objLine = new Line();
+        var objLine = new Line 
+        {
+            Stroke = Brushes.Black, 
+            Fill = Brushes.Black
+        };
 
-        objLine.Stroke = Brushes.Black;
-        objLine.Fill = Brushes.Black;
+        var p1 = MapPoint(x);
+        objLine.X1 = p1.X;
+        objLine.Y1 = p1.Y;
 
-        double height = Surface.ActualHeight / 2;
-        double width  = Surface.ActualWidth / 2;
-
-        int indicador = 50; // Skalierung
-
-        objLine.X1 = (x.X * indicador) + width;
-        objLine.Y1 = (x.Y * indicador) + height;
-
-        objLine.X2 = (y.X * indicador) + width;
-        objLine.Y2 = (y.Y * indicador) + height;
-
-        objLine.StrokeThickness = 1;
+        var p2 = MapPoint(y);
+        objLine.X2 = p2.X;
+        objLine.Y2 = p2.Y;
 
         Surface.Children.Add(objLine);
     }
+
     public void Triangle(Triangle tri)
     {
         if(tri != null)
@@ -387,18 +384,45 @@ class DrawingSurface
 
             Line(p1, p2);
             Line(p2, p3);
-            Line(p1, p3);
+
+            var p = new Polygon 
+            {
+                Points = 
+                {
+                    MapPoint(p1), 
+                    MapPoint(p2), 
+                    MapPoint(p3)
+                },
+                Fill            = Brushes.Red,
+                Stroke          = Brushes.Green,
+                StrokeThickness = 1
+            };
+
+            Surface.Children.Add(p);
+            //Line(p1, p3);
         }
     }
+
+    Point MapPoint(Point p) 
+    {
+        // Offset
+        double height = Surface.ActualHeight / 2;
+        double width  = Surface.ActualWidth  / 2;
+
+        int indicador = 50; // Skalierung
+
+        return new Point(p.X * indicador + width, p.Y * indicador + height);
+    }
+
 }
 class Matrix
 {
-    public static double[,] MultiplyMatrix(double[,] A, double[,] B)
+    public static double[,] MultiplyMatrix(double[,] a, double[,] b)
     {
-        int rA = A.GetLength(0);
-        int cA = A.GetLength(1);
-        int rB = B.GetLength(0);
-        int cB = B.GetLength(1);
+        int rA = a.GetLength(0);
+        int cA = a.GetLength(1);
+        int rB = b.GetLength(0);
+        int cB = b.GetLength(1);
         double temp = 0;
         double[,] kHasil = new double[rA, cB];
         if (cA != rB)
@@ -414,7 +438,7 @@ class Matrix
                     temp = 0;
                     for (int k = 0; k < cA; k++)
                     {
-                        temp += A[i, k] * B[k, j];
+                        temp += a[i, k] * b[k, j];
                     }
                     kHasil[i, j] = temp;
                 }
