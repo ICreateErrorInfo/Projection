@@ -73,12 +73,11 @@ namespace Projection
             Load.createTriangles(translatedVerts);
 
             Triangle[] projectedTriangles = new Triangle[Load.importedTriangles.Count];
+            Color col;
 
             for (int i = 0; i < Load.importedTriangles.Count; i++)
             {
-               
                 Vektor line1 = new Vektor(Load.importedTriangles[i].tp2, Load.importedTriangles[i].tp1);
-
                 Vektor line2 = new Vektor(Load.importedTriangles[i].tp2, Load.importedTriangles[i].tp3);
 
                 Vektor normal = new Vektor();
@@ -88,47 +87,39 @@ namespace Projection
 
                 if (Vektor.DotProduct(normal, pointToCamera) > 0)
                 {
-                    projectedTriangles[i] = PerspectiveProjectionMatrix(Load.importedTriangles[i]);
+                    Vektor lightDirection = new Vektor(0,0,-1);
+                    lightDirection = Vektor.Normalise(lightDirection);
+
+                    double dp = Vektor.DotProduct(normal, lightDirection);
+
+                    col = Color.FromArgb(250, Convert.ToByte(dp * -250), Convert.ToByte(dp * -250), Convert.ToByte(dp * -250));
+
+                    Vektor projectedPoint1 = PerspectiveProjectionMatrix(Load.importedTriangles[i].tp1);
+                    Vektor projectedPoint2 = PerspectiveProjectionMatrix(Load.importedTriangles[i].tp2);
+                    Vektor projectedPoint3 = PerspectiveProjectionMatrix(Load.importedTriangles[i].tp3);
+
+                    _drawingSurface.Triangle(new Triangle(projectedPoint1, projectedPoint2, projectedPoint3), col);
                 }
             }
-            viewTriangles(projectedTriangles);
         }
-        private Triangle PerspectiveProjectionMatrix(Triangle input)
+        private Vektor PerspectiveProjectionMatrix(Vektor input)
         {
-            List<Vektor> pointList = new List<Vektor>();
-
-            List<Vektor> inputPointList = new List<Vektor>();
-            inputPointList.Add(input.tp1);
-            inputPointList.Add(input.tp2);
-            inputPointList.Add(input.tp3);
-
             double Fov = 90;
             double near = .1;
             double far = 100;
 
             double aspectRation = 1920 / 1080; // auflösung Bildschirm
-            for (int i = 0; i < 3; i++)
-            {
-                Vektor ergebnis = Matrix.MultiplyVektor(Matrix.Projecton(Fov, aspectRation, far, near), inputPointList[i]);
-                double bx = ergebnis.X;
-                double by = ergebnis.Y;
 
-                if (ergebnis.W != 0)
-                {
-                    bx = ergebnis.X / ergebnis.W;
-                    by = ergebnis.Y / ergebnis.W;
-                }
-                pointList.Add(new Vektor(bx, by, 0));
-            }
-            return new Triangle(pointList[0], pointList[1], pointList[2]);
+            Vektor ergebnis = Matrix.MultiplyVektor(Matrix.Projecton(Fov, aspectRation, far, near), input);
+            double bx = ergebnis.X;
+            double by = ergebnis.Y;
 
-        }
-        private void viewTriangles(Triangle[] triarr)
-        {
-            foreach (Triangle tri in triarr)
+            if (ergebnis.W != 0)
             {
-                _drawingSurface.Triangle(tri);
+                bx = ergebnis.X / ergebnis.W;
+                by = ergebnis.Y / ergebnis.W;
             }
+            return new Vektor(bx, by, 0);
         }
         public static double ToRad(double deg) => deg * Math.PI / 180;
     }
@@ -201,12 +192,16 @@ class Vektor
         X = ende.X - anfang.X;
         Y = ende.Y - anfang.Y;
         Z = ende.Z - anfang.Z;
+        W = 1;
     }
     public Vektor()
     {
-
+        X = 0;
+        Y = 0;
+        Z = 0;
+        W = 1;
     }
-    public double length(Vektor v)
+    public static double length(Vektor v)
     {
         return Math.Sqrt(DotProduct(v, v));
     }
@@ -216,7 +211,7 @@ class Vektor
                v1.Y * v2.Y +
                v1.Z * v2.Z;
     }
-    public Vektor Normalise(Vektor v)
+    public static Vektor Normalise(Vektor v)
     {
         double l = length(v);
         return new Vektor(v.X / l, v.Y / l, v.Z / l);
@@ -227,8 +222,8 @@ class Vektor
         v.X = v1.Y * v2.Z - v1.Z * v2.Y;
         v.Y = v1.Z * v2.X - v1.X * v2.Z;
         v.Z = v1.X * v2.Y - v1.Y * v2.X;
+        
         return v;
-
     }
     public void CalcNormals(Vektor v1, Vektor v2)
     {
@@ -289,18 +284,19 @@ class DrawingSurface
         Surface = new Canvas();
         Surface.RenderTransformOrigin = new Point(0.5, 0.5);
         Surface.RenderTransform = new ScaleTransform(1, 1);
+        Surface.Background = Brushes.DarkGray;
     }
     public Canvas Surface { get; }
     public void Clear()
     {
         Surface.Children.Clear();
     }
-    public void Line(Point x, Point y)
+    public void Line(Point x, Point y, SolidColorBrush brush)
     {
         var objLine = new Line
         {
-            Stroke = Brushes.Black,
-            Fill = Brushes.Black
+            Stroke = brush,
+            Fill = brush
         };
 
         var p1 = MapPoint(x);
@@ -311,9 +307,11 @@ class DrawingSurface
         objLine.X2 = p2.X;
         objLine.Y2 = p2.Y;
 
+        objLine.StrokeThickness = 2; 
+
         Surface.Children.Add(objLine);
     }
-    public void Triangle(Triangle tri)
+    public void Triangle(Triangle tri, Color col)
     {
         if (tri != null)
         {
@@ -321,9 +319,10 @@ class DrawingSurface
             Point p2 = new Point(tri.tp2.X, tri.tp2.Y);
             Point p3 = new Point(tri.tp3.X, tri.tp3.Y);
 
-            Line(p1, p2);
-            Line(p2, p3);
-            Line(p1, p3);
+            SolidColorBrush brush = new SolidColorBrush(col);
+            Line(p1, p2, brush);
+            Line(p2, p3, brush);
+            Line(p1, p3, brush);
 
             var p = new Polygon
             {
@@ -333,9 +332,10 @@ class DrawingSurface
                     MapPoint(p2),
                     MapPoint(p3)
                 },
-                Fill = Brushes.Gray,
+                
+                Fill = brush,
                 Stroke = Brushes.Black,
-                StrokeThickness = 1
+                StrokeThickness = 0
             };
 
             Surface.Children.Add(p);
@@ -446,7 +446,7 @@ class Matrix
     }
     public static double[,] Identety()
     {
-        double[,] matrix=
+        double[,] matrix =
         {
             {1,0,0,0 },
             {0,1,0,0 },
@@ -491,7 +491,7 @@ class Matrix
     }
     public static Vektor toVektor(double[,] a)
     {
-            return new Vektor(a[0, 0], a[1, 0], a[2, 0], a[3, 0]);
+        return new Vektor(a[0, 0], a[1, 0], a[2, 0], a[3, 0]);
     }
 }
 
