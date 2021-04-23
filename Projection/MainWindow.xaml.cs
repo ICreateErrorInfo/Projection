@@ -25,7 +25,7 @@ namespace Projection
     {
         double abstand = 5;
         Vektor Camera = new Vektor(0, 0, 0);
-        string loadPath = "C:/Users/Moritz/Desktop/test.obj";
+        string loadPath = "C:/Users/Moritz/source/repos/Projection/Testfiles/test.obj";
 
         double _currentAngle = 1;
         private readonly DispatcherTimer _timer;
@@ -504,7 +504,7 @@ class Matrix
         worldMatrix = Matrix.MultiplyMatrix(worldMatrix, translate);
         worldMatrix = Matrix.MultiplyMatrix(worldMatrix, rotateX);
         worldMatrix = Matrix.MultiplyMatrix(worldMatrix, rotateY);
-        worldMatrix = Matrix.MultiplyMatrix(worldMatrix, rotateZ);
+        //worldMatrix = Matrix.MultiplyMatrix(worldMatrix, rotateZ);
 
         return worldMatrix;
     }
