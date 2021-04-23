@@ -52,7 +52,6 @@ namespace Projection
             var ofn = new OpenFileDialog 
             {
                 Filter           = "Object files (*.obj)|*.obj",
-                InitialDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? ""
             };
             if (ofn.ShowDialog() == true) {
                 Load.obj(ofn.FileName);
