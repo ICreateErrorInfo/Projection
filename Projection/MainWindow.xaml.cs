@@ -23,8 +23,11 @@ namespace Projection
     /// </summary>
     public partial class MainWindow : Window
     {
-        double abstand = 5;
+        double abstand = 6;
         Vektor Camera = new Vektor(0, 0, 0);
+        Vektor lookDirCamera = new Vektor(0,0,1);
+        Vektor up = new Vektor( 0, 1, 0 );
+        Vektor Target = new Vektor();
         string loadPath = "C:/Users/Moritz/source/repos/Projection/Testfiles/test.obj";
 
         double _currentAngle = 1;
@@ -35,6 +38,7 @@ namespace Projection
         {
             //Initialize
             InitializeComponent();
+            Target = Camera + lookDirCamera;
 
             _drawingSurface = new DrawingSurface();
             MainGrid.Children.Add(_drawingSurface.Surface);
@@ -66,6 +70,35 @@ namespace Projection
                 e.Handled = true;
             }
             base.OnKeyDown(e);
+
+            if (e.Key == Key.Space)
+            {
+                Camera.Y += .01;
+                e.Handled = true;
+            }
+            base.OnKeyDown(e);
+
+            if (e.Key == Key.LeftCtrl)
+            {
+                Camera.Y -= .01;
+                e.Handled = true;
+            }
+            base.OnKeyDown(e);
+
+
+            if (e.Key == Key.A)
+            {
+                Camera.X += .01;
+                e.Handled = true;
+            }
+            base.OnKeyDown(e);
+
+            if (e.Key == Key.D)
+            {
+                Camera.X -= .01;
+                e.Handled = true;
+            }
+            base.OnKeyDown(e);
         }
         private void Update(object sender, EventArgs e)
         {
@@ -77,6 +110,10 @@ namespace Projection
         {
             Load.importedTriangles.Clear();
             List<Vektor> translatedVerts = new List<Vektor>();
+
+            //double[,] matCamera = Matrix.PointAt(Camera, Target, up);
+            double[,] matView = Matrix.lookAt(Camera, Target, up);
+
 
             for (int j = 0; j < Load.verts.Count; j++)
             {
@@ -94,6 +131,7 @@ namespace Projection
 
             for (int i = 0; i < Load.importedTriangles.Count; i++)
             {
+                Triangle triViewed = new Triangle();
                 Vektor line1 = new Vektor(Load.importedTriangles[i].tp2, Load.importedTriangles[i].tp1);
                 Vektor line2 = new Vektor(Load.importedTriangles[i].tp2, Load.importedTriangles[i].tp3);
 
@@ -111,9 +149,13 @@ namespace Projection
                     var    grayValue = Convert.ToByte(Math.Abs(dp * Byte.MaxValue));
                     col = Color.FromArgb(250, grayValue, grayValue, grayValue);
 
-                    Vektor projectedPoint1 = PerspectiveProjectionMatrix(Load.importedTriangles[i].tp1);
-                    Vektor projectedPoint2 = PerspectiveProjectionMatrix(Load.importedTriangles[i].tp2);
-                    Vektor projectedPoint3 = PerspectiveProjectionMatrix(Load.importedTriangles[i].tp3);
+                    triViewed.tp1 = Matrix.toVektor(Matrix.MultiplyMatrix(matView, Vektor.toMatrix(Load.importedTriangles[i].tp1)));
+                    triViewed.tp2 = Matrix.toVektor(Matrix.MultiplyMatrix(matView, Vektor.toMatrix(Load.importedTriangles[i].tp2)));
+                    triViewed.tp3 = Matrix.toVektor(Matrix.MultiplyMatrix(matView, Vektor.toMatrix(Load.importedTriangles[i].tp3)));
+
+                    Vektor projectedPoint1 = PerspectiveProjectionMatrix(triViewed.tp1);
+                    Vektor projectedPoint2 = PerspectiveProjectionMatrix(triViewed.tp2);
+                    Vektor projectedPoint3 = PerspectiveProjectionMatrix(triViewed.tp3);
 
                     _drawingSurface.Triangle(new Triangle(projectedPoint1, projectedPoint2, projectedPoint3), col);
                 }
@@ -228,12 +270,16 @@ class Vektor
                v1.Y * v2.Y +
                v1.Z * v2.Z;
     }
+    public static Vektor DotProductVek(Vektor v1, Vektor v2)
+    {
+        return v1 * v2;
+    }
     public static Vektor Normalise(Vektor v)
     {
         double l = length(v);
         return new Vektor(v.X / l, v.Y / l, v.Z / l);
     }
-    public Vektor CrossProduct(Vektor v1, Vektor v2)
+    public static Vektor CrossProduct(Vektor v1, Vektor v2)
     {
         Vektor v = new Vektor();
         v.X = v1.Y * v2.Z - v1.Z * v2.Y;
@@ -250,6 +296,17 @@ class Vektor
         X = v.X;
         Y = v.Y;
         Z = v.Z;
+    }
+    public static double[,] toMatrix(Vektor v)
+    {
+        double[,] matrix =
+        {
+            { v.X},
+            { v.Y},
+            { v.Z},
+            { v.W}
+        };
+        return matrix;
     }
     public static Vektor operator +(Vektor v1, Vektor v2)
     {
@@ -288,6 +345,10 @@ class Triangle
         tp1 = p1;
         tp2 = p2;
         tp3 = p3;
+    }
+    public Triangle()
+    {
+
     }
 
     public Vektor tp1;
@@ -350,7 +411,7 @@ class DrawingSurface
                     MapPoint(p3)
                 },
                 
-                Fill = brush,
+                Fill = Brushes.Black,
                 Stroke = Brushes.Black,
                 StrokeThickness = 0
             };
@@ -505,6 +566,48 @@ class Matrix
         //worldMatrix = Matrix.MultiplyMatrix(worldMatrix, rotateZ);
 
         return worldMatrix;
+    }
+    public static double[,] PointAt(Vektor pos, Vektor target, Vektor up)
+    {
+        Vektor zaxis = target - pos;
+        zaxis = Vektor.Normalise(zaxis);
+
+        Vektor xaxis = Vektor.Normalise(Vektor.CrossProduct(up, zaxis));
+
+        Vektor yaxis = Vektor.CrossProduct(zaxis, xaxis);
+
+        double[,] matrix =
+        {
+            {xaxis.X, xaxis.Y, xaxis.Z,0},
+            {yaxis.X, yaxis.Y, yaxis.Z,0},
+            {zaxis.X, zaxis.Y, zaxis.Z,0},
+            {pos.X, pos.Y, pos.Z, 1}
+        };
+
+        return matrix;
+    }
+    public static double[,] lookAt(Vektor pos, Vektor target, Vektor up)
+    {
+        Vektor forward = target - pos;
+        forward = Vektor.Normalise(forward);
+
+        Vektor Right = Vektor.Normalise(Vektor.CrossProduct(up, forward));
+
+        Vektor newUp = Vektor.CrossProduct(forward, Right);
+
+        double rechnung = -(Vektor.DotProduct(Right, pos));
+        double rechnung1 = -(Vektor.DotProduct(newUp, pos));
+        double rechnung2 = -(Vektor.DotProduct(forward, pos));
+
+        double[,] matrix =
+        {
+            {Right.X, newUp.X, forward.X,0},
+            {Right.Y, newUp.Y, forward.Y,0},
+            {Right.Z, newUp.Z, forward.Z,0},
+            {rechnung, rechnung1, rechnung2, 1}
+        };
+
+        return matrix;
     }
     public static Vektor toVektor(double[,] a)
     {
