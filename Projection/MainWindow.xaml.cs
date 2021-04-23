@@ -18,130 +18,86 @@ namespace Projection
     /// </summary>
     public partial class MainWindow : Window
     {
+        double abstand = 5;
+        Vektor Camera = new Vektor(0, 0, 0);
+        string loadPath = "C:/Users/Moritz/Desktop/test.obj";
 
         double _currentAngle = 1;
-        double abstand = 6;
-        Point3D Camera = new Point3D(0,0,0);
-
         private readonly DispatcherTimer _timer;
         private readonly DrawingSurface _drawingSurface;
 
         public MainWindow()
         {
+            //Initialize
             InitializeComponent();
 
             _drawingSurface = new DrawingSurface();
             MainGrid.Children.Add(_drawingSurface.Surface);
-            Load.obj("C:/Users/Moritz/Desktop/test.obj");
+            Load.obj(loadPath);
 
-
-            _timer          =  new DispatcherTimer();
-            _timer.Tick     += OnTick;
-            _timer.Interval =  TimeSpan.FromMilliseconds(15);
+            _timer = new DispatcherTimer();
+            _timer.Tick += Update;
+            _timer.Interval = TimeSpan.FromMilliseconds(5);
             _timer.Start();
         }
 
-        protected override void OnKeyDown(KeyEventArgs e) 
+        protected override void OnKeyDown(KeyEventArgs e)
         {
-            if (e.Key == Key.P) 
+            if (e.Key == Key.P)
             {
                 _timer.IsEnabled ^= true;
-                e.Handled        =  true;
+                e.Handled = true;
             }
             base.OnKeyDown(e);
         }
-        private void OnTick(object sender, EventArgs e)
+        private void Update(object sender, EventArgs e)
         {
+            //update
             _drawingSurface.Clear();
-            Project(_currentAngle);
-            
+            Project(++_currentAngle);
         }
         void Project(double angle)
         {
-
             Load.importedTriangles.Clear();
-            //Rotate
+            List<Vektor> translatedVerts = new List<Vektor>();
+
             for (int j = 0; j < Load.verts.Count; j++)
             {
-                Point3D element = Load.verts[j];
+                Vektor element = Load.verts[j];
 
-               double[,] inputAsMatrix =
-               {
-                    {element.X },
-                    {element.Y },
-                    {element.Z }
-                };
-                double[,] MatrixErgebnis = Matrix.MultiplyMatrix(Rotate.x(angle), inputAsMatrix);
-                MatrixErgebnis = Matrix.MultiplyMatrix(Rotate.y(angle), MatrixErgebnis);
-                MatrixErgebnis = Matrix.MultiplyMatrix(Rotate.z(angle), MatrixErgebnis);
+                Vektor erg = Matrix.MultiplyVektor(Matrix.WorldMatrix(angle, abstand), element);
 
-                Point3D erg = new Point3D(MatrixErgebnis[0, 0], MatrixErgebnis[1, 0], MatrixErgebnis[2, 0]);
-                Load.verts[j] = erg;
-
+                translatedVerts.Add(erg);
             }
 
-            //verschibt alle punkte
-            for (int t = 0; t < Load.verts.Count; t++)
-            {
-                Point3D element = Load.verts[t];
-
-                element.Z -= abstand;
-                Load.verts[t] = element;
-            }
-
-            Load.createTriangles();
+            Load.createTriangles(translatedVerts);
 
             Triangle[] projectedTriangles = new Triangle[Load.importedTriangles.Count];
 
-            int i = 0;
-            foreach (Triangle element in Load.importedTriangles)
+            for (int i = 0; i < Load.importedTriangles.Count; i++)
             {
-                Vektor line1 = new Vektor();
-                line1.X = element.tp1.X - element.tp2.X;
-                line1.Y = element.tp1.Y - element.tp2.Y;
-                line1.Z = element.tp1.Z - element.tp2.Z;
+               
+                Vektor line1 = new Vektor(Load.importedTriangles[i].tp2, Load.importedTriangles[i].tp1);
 
-                Vektor line2 = new Vektor();
-                line2.X = element.tp3.X - element.tp2.X;    
-                line2.Y = element.tp3.Y - element.tp2.Y;
-                line2.Z = element.tp3.Z - element.tp2.Z;
+                Vektor line2 = new Vektor(Load.importedTriangles[i].tp2, Load.importedTriangles[i].tp3);
 
                 Vektor normal = new Vektor();
-                normal.X = line1.Y * line2.Z - line1.Z * line2.Y;
-                normal.Y = line1.Z * line2.X - line1.X * line2.Z;
-                normal.Z = line1.X * line2.Y - line1.Y * line2.X;
+                normal.CalcNormals(line1, line2);
 
-                double l = Math.Sqrt(normal.X * normal.X + normal.Y * normal.Y + normal.Z * normal.Z);
+                Vektor pointToCamera = Load.importedTriangles[i].tp1 - Camera;
 
-                normal.X /= l;
-                normal.Y /= l;
-                normal.Z /= l;
-
-                if(normal.X * (element.tp2.X - Camera.X) +
-                    normal.Y * (element.tp2.Y - Camera.Y)+
-                    normal.Z * (element.tp2.Z - Camera.Z) > 0)
+                if (Vektor.DotProduct(normal, pointToCamera) > 0)
                 {
-                        projectedTriangles[i] = PerspectiveProjectionMatrix(element);
-
+                    projectedTriangles[i] = PerspectiveProjectionMatrix(Load.importedTriangles[i]);
                 }
-                i++;
             }
             viewTriangles(projectedTriangles);
-
-            for (int t = 0; t < Load.verts.Count; t++)
-            {
-                Point3D element = Load.verts[t];
-
-                element.Z += abstand;
-                Load.verts[t] = element;
-            }
-
         }
         private Triangle PerspectiveProjectionMatrix(Triangle input)
         {
-            List<Point3D> pointList = new List<Point3D>();
+            List<Vektor> pointList = new List<Vektor>();
 
-            List<Point3D> inputPointList = new List<Point3D>();
+            List<Vektor> inputPointList = new List<Vektor>();
             inputPointList.Add(input.tp1);
             inputPointList.Add(input.tp2);
             inputPointList.Add(input.tp3);
@@ -149,49 +105,27 @@ namespace Projection
             double Fov = 90;
             double near = .1;
             double far = 100;
-            double w = 1;
 
             double aspectRation = 1920 / 1080; // auflösung Bildschirm
-            for(int i = 0; i < 3; i++)
+            for (int i = 0; i < 3; i++)
             {
-                double Rechnung2 = 1 / Math.Round(Math.Tan(ToRad(Fov / 2)), 3);
-                double Rechnung1 = aspectRation * (Rechnung2);
-                double Rechnung3 = far / (far - near);
-                double Rechnung4 = (-far * near) / (far - near);
+                Vektor ergebnis = Matrix.MultiplyVektor(Matrix.Projecton(Fov, aspectRation, far, near), inputPointList[i]);
+                double bx = ergebnis.X;
+                double by = ergebnis.Y;
 
-                double[,] matrix =
+                if (ergebnis.W != 0)
                 {
-                {Rechnung1, 0, 0, 0},
-                {0, Rechnung2, 0, 0},
-                {0, 0, Rechnung3, 1},
-                {0, 0, Rechnung4, 0}
-            };
-
-                double[,] inputMatrix =
-                {
-                {inputPointList[i].X },
-                {inputPointList[i].Y },
-                {inputPointList[i].Z },
-                {w },
-            };
-
-                double[,] ergebnis = Matrix.MultiplyMatrix(matrix, inputMatrix);
-                double bx = ergebnis[0, 0];
-                double by = ergebnis[1, 0];
-
-                if (w != 0)
-                {
-                    bx = ergebnis[0, 0] / ergebnis[3, 0];
-                    by = ergebnis[1, 0] / ergebnis[3, 0];
+                    bx = ergebnis.X / ergebnis.W;
+                    by = ergebnis.Y / ergebnis.W;
                 }
-                pointList.Add(new Point3D(bx, by , 0));
+                pointList.Add(new Vektor(bx, by, 0));
             }
             return new Triangle(pointList[0], pointList[1], pointList[2]);
 
         }
         private void viewTriangles(Triangle[] triarr)
         {
-            foreach(Triangle tri in triarr)
+            foreach (Triangle tri in triarr)
             {
                 _drawingSurface.Triangle(tri);
             }
@@ -201,112 +135,49 @@ namespace Projection
 }
 class Load
 {
-    public static List<Point3D> verts= new List<Point3D>();
+    public static List<Vektor> verts = new List<Vektor>();
     public static List<Triangle> importedTriangles = new List<Triangle>();
     static List<string> stringList = new List<string>();
+
     public static void obj(string filename)
     {
         importedTriangles.Clear();
         verts.Clear();
-        
 
         foreach (var myString in File.ReadAllLines(filename))
         {
             stringList.Add(myString);
         }
 
-        int i = 0;
-        foreach(var element in stringList)
+        for (int i = 0; i < stringList.Count; i++)
         {
-            if(i > 1)
+            if (i > 1)
             {
-                string[] zeile = element.Split(' ');
+                string[] zeile = stringList[i].Split(' ');
 
-                if(zeile[0] == "v")
+                if (zeile[0] == "v")
                 {
                     NumberFormatInfo provider = new NumberFormatInfo();
                     provider.NumberDecimalSeparator = ".";
-                    verts.Add(new Point3D(Convert.ToDouble(zeile[1], provider), Convert.ToDouble(zeile[2], provider), Convert.ToDouble(zeile[3], provider)));
+                    verts.Add(new Vektor(Convert.ToDouble(zeile[1], provider), Convert.ToDouble(zeile[2], provider), Convert.ToDouble(zeile[3], provider)));
                 }
             }
-            i++;
-        }       
+        }
     }
-    public static void createTriangles()
+    public static void createTriangles(List<Vektor> vertsImp)
     {
-        int i = 0;
-        foreach (var element in stringList)
+        for (int i = 0; i < stringList.Count; i++)
         {
-            if (i > 2)
+            if (i > 1)
             {
-                string[] zeile = element.Split(' ');
+                string[] zeile = stringList[i].Split(' ');
 
                 if (zeile[0] == "f")
                 {
-                    importedTriangles.Add(new Triangle(verts[Convert.ToInt32(zeile[1]) - 1], verts[Convert.ToInt32(zeile[2]) - 1], verts[Convert.ToInt32(zeile[3]) - 1]));
+                    importedTriangles.Add(new Triangle(vertsImp[Convert.ToInt32(zeile[1]) - 1], vertsImp[Convert.ToInt32(zeile[2]) - 1], vertsImp[Convert.ToInt32(zeile[3]) - 1]));
                 }
             }
-            i++;
         }
-    }
-}
-class Point3D
-{
-    public  Point3D(double x, double y, double z)
-    {
-        X = x;
-        Y = y;
-        Z = z;
-    }
-
-    public Point3D(Point3D a)
-    {
-        X = a.X;
-        Y = a.Y;
-        Z = a.Z;
-    }
-    public Point3D()
-    {
-    }
-
-    public double X;
-    public double Y;
-    public double Z;
-}
-public class Rotate
-{
-    public static double[,] x(double angle)
-    {
-        double[,] rotationX =
-            {
-            {1,0,0 },
-            {0, Math.Round(Math.Cos(Projection.MainWindow.ToRad(angle)), 3), Math.Round(Math.Sin(Projection.MainWindow.ToRad(angle) * -1), 3)},
-            {0, Math.Round(Math.Sin(Projection.MainWindow.ToRad(angle)), 3), Math.Round(Math.Cos(Projection.MainWindow.ToRad(angle)), 3)},
-            };
-
-        return rotationX;
-    }
-    public static double[,] y(double angle)
-    {
-        double[,] rotationY =
-            {
-            {Math.Round(Math.Cos(Projection.MainWindow.ToRad(angle)), 3),0, Math.Round(Math.Sin(Projection.MainWindow.ToRad(angle) * -1), 3)},
-            {0, 1, 0},
-            {Math.Round(Math.Sin(Projection.MainWindow.ToRad(angle)), 3),0, Math.Round(Math.Cos(Projection.MainWindow.ToRad(angle)), 3)},
-            };
-
-        return rotationY;
-    }
-    public static double[,] z(double angle)
-    {
-        double[,] rotationZ =
-            {
-            {Math.Round(Math.Cos(Projection.MainWindow.ToRad(angle)), 3), Math.Round(Math.Sin(Projection.MainWindow.ToRad(angle) * -1), 3), 0},
-            {Math.Round(Math.Sin(Projection.MainWindow.ToRad(angle)), 3), Math.Round(Math.Cos(Projection.MainWindow.ToRad(angle)), 3), 0},
-            {0,0,1 }
-            };
-
-        return rotationZ;
     }
 }
 class Vektor
@@ -316,50 +187,119 @@ class Vektor
         X = x;
         Y = y;
         Z = z;
+        W = 1;
+    }
+    public Vektor(double x, double y, double z, double w)
+    {
+        X = x;
+        Y = y;
+        Z = z;
+        W = w;
+    }
+    public Vektor(Vektor anfang, Vektor ende)
+    {
+        X = ende.X - anfang.X;
+        Y = ende.Y - anfang.Y;
+        Z = ende.Z - anfang.Z;
     }
     public Vektor()
     {
+
+    }
+    public double length(Vektor v)
+    {
+        return Math.Sqrt(DotProduct(v, v));
+    }
+    public static double DotProduct(Vektor v1, Vektor v2)
+    {
+        return v1.X * v2.X +
+               v1.Y * v2.Y +
+               v1.Z * v2.Z;
+    }
+    public Vektor Normalise(Vektor v)
+    {
+        double l = length(v);
+        return new Vektor(v.X / l, v.Y / l, v.Z / l);
+    }
+    public Vektor CrossProduct(Vektor v1, Vektor v2)
+    {
+        Vektor v = new Vektor();
+        v.X = v1.Y * v2.Z - v1.Z * v2.Y;
+        v.Y = v1.Z * v2.X - v1.X * v2.Z;
+        v.Z = v1.X * v2.Y - v1.Y * v2.X;
+        return v;
+
+    }
+    public void CalcNormals(Vektor v1, Vektor v2)
+    {
+        Vektor v = CrossProduct(v1, v2);
+        v = Normalise(v);
+
+        X = v.X;
+        Y = v.Y;
+        Z = v.Z;
+    }
+    public static Vektor operator +(Vektor v1, Vektor v2)
+    {
+        return new Vektor(v1.X + v2.X,
+                          v1.Y + v2.Y,
+                          v1.Z + v2.Z);
+    }
+    public static Vektor operator -(Vektor v1, Vektor v2)
+    {
+        return new Vektor(v1.X - v2.X,
+                          v1.Y - v2.Y,
+                          v1.Z - v2.Z);
+    }
+    public static Vektor operator *(Vektor v1, Vektor v2)
+    {
+        return new Vektor(v1.X * v2.X,
+                          v1.Y * v2.Y,
+                          v1.Z * v2.Z);
+    }
+    public static Vektor operator /(Vektor v1, Vektor v2)
+    {
+        return new Vektor(v1.X / v2.X,
+                          v1.Y / v2.Y,
+                          v1.Z / v2.Z);
     }
 
     public double X;
     public double Y;
     public double Z;
+    public double W;
 }
 class Triangle
 {
-    public Triangle(Point3D p1, Point3D p2, Point3D p3)
+    public Triangle(Vektor p1, Vektor p2, Vektor p3)
     {
         tp1 = p1;
         tp2 = p2;
         tp3 = p3;
     }
 
-    public Point3D tp1;
-    public Point3D tp2;
-    public Point3D tp3;
+    public Vektor tp1;
+    public Vektor tp2;
+    public Vektor tp3;
 }
 class DrawingSurface
 {
-
-    public DrawingSurface() 
+    public DrawingSurface()
     {
-        Surface                       = new Canvas();
+        Surface = new Canvas();
         Surface.RenderTransformOrigin = new Point(0.5, 0.5);
-        Surface.RenderTransform       = new ScaleTransform(1, 1);
-;
+        Surface.RenderTransform = new ScaleTransform(1, 1);
     }
-
     public Canvas Surface { get; }
-
     public void Clear()
     {
         Surface.Children.Clear();
     }
-    public  void Line(Point x, Point y)
+    public void Line(Point x, Point y)
     {
-        var objLine = new Line 
+        var objLine = new Line
         {
-            Stroke = Brushes.Black, 
+            Stroke = Brushes.Black,
             Fill = Brushes.Black
         };
 
@@ -373,10 +313,9 @@ class DrawingSurface
 
         Surface.Children.Add(objLine);
     }
-
     public void Triangle(Triangle tri)
     {
-        if(tri != null)
+        if (tri != null)
         {
             Point p1 = new Point(tri.tp1.X, tri.tp1.Y);
             Point p2 = new Point(tri.tp2.X, tri.tp2.Y);
@@ -384,36 +323,35 @@ class DrawingSurface
 
             Line(p1, p2);
             Line(p2, p3);
+            Line(p1, p3);
 
-            var p = new Polygon 
+            var p = new Polygon
             {
-                Points = 
+                Points =
                 {
-                    MapPoint(p1), 
-                    MapPoint(p2), 
+                    MapPoint(p1),
+                    MapPoint(p2),
                     MapPoint(p3)
                 },
-                Fill            = Brushes.Red,
-                Stroke          = Brushes.Green,
+                Fill = Brushes.Gray,
+                Stroke = Brushes.Black,
                 StrokeThickness = 1
             };
 
             Surface.Children.Add(p);
-            //Line(p1, p3);
+
         }
     }
-
-    Point MapPoint(Point p) 
+    Point MapPoint(Point p)
     {
         // Offset
         double height = Surface.ActualHeight / 2;
-        double width  = Surface.ActualWidth  / 2;
+        double width = Surface.ActualWidth / 2;
 
         int indicador = 50; // Skalierung
 
         return new Point(p.X * indicador + width, p.Y * indicador + height);
     }
-
 }
 class Matrix
 {
@@ -446,6 +384,114 @@ class Matrix
             return kHasil;
         }
         return null;
+    }
+    public static Vektor MultiplyVektor(double[,] a, Vektor v)
+    {
+        double[,] b =
+        {
+            { v.X},
+            { v.Y},
+            { v.Z},
+            { v.W}
+        };
+
+        return toVektor(MultiplyMatrix(a, b));
+    }
+    public static double[,] RotateX(double angle)
+    {
+        double[,] rotationX =
+            {
+            {1,0,0, 0},
+            {0, Math.Cos(Projection.MainWindow.ToRad(angle)), Math.Sin(Projection.MainWindow.ToRad(angle) * -1),0},
+            {0, Math.Sin(Projection.MainWindow.ToRad(angle)), Math.Cos(Projection.MainWindow.ToRad(angle)),0},
+            {0,0,0,1 }
+            };
+
+        return rotationX;
+    }
+    public static double[,] RotateY(double angle)
+    {
+        double[,] rotationY =
+            {
+            {Math.Cos(Projection.MainWindow.ToRad(angle)),0 ,Math.Sin(Projection.MainWindow.ToRad(angle) * -1),0},
+            {0, 1, 0,0},
+            {Math.Sin(Projection.MainWindow.ToRad(angle)),0 ,Math.Cos(Projection.MainWindow.ToRad(angle)),0},
+            {0,0,0,1 }
+            };
+
+        return rotationY;
+    }
+    public static double[,] RotateZ(double angle)
+    {
+        double[,] rotationZ =
+            {
+            {Math.Cos(Projection.MainWindow.ToRad(angle)), Math.Sin(Projection.MainWindow.ToRad(angle) * -1), 0 ,0},
+            {Math.Sin(Projection.MainWindow.ToRad(angle)), Math.Cos(Projection.MainWindow.ToRad(angle)), 0 ,0},
+            {0, 0, 1 , 0},
+            {0, 0, 0 , 1},
+            };
+
+        return rotationZ;
+    }
+    public static double[,] Translation(double x, double y, double z)
+    {
+        double[,] matrix =
+        {
+            { 1, 0, 0, x },
+            { 0, 1, 0, y },
+            { 0, 0, 1, z },
+            { 0, 0, 0, 1 }
+        };
+        return matrix;
+    }
+    public static double[,] Identety()
+    {
+        double[,] matrix=
+        {
+            {1,0,0,0 },
+            {0,1,0,0 },
+            {0,0,1,0 },
+            {0,0,0,1 }
+        };
+
+        return matrix;
+    }
+    public static double[,] Projecton(double Fov, double aspectRatio, double far, double near)
+    {
+        double Rechnung2 = 1 / Math.Round(Math.Tan(Projection.MainWindow.ToRad(Fov / 2)), 3);
+        double Rechnung1 = aspectRatio * (Rechnung2);
+        double Rechnung3 = far / (far - near);
+        double Rechnung4 = (-far * near) / (far - near);
+
+        double[,] matrix =
+        {
+                { Rechnung1, 0, 0, 0 },
+                { 0, Rechnung2, 0, 0 },
+                { 0, 0, Rechnung3, 1 },
+                { 0, 0, Rechnung4, 0 }
+        };
+
+        return matrix;
+    }
+    public static double[,] WorldMatrix(double angle, double abstand)
+    {
+        double[,] rotateX = Matrix.RotateX(angle);
+        double[,] rotateY = Matrix.RotateY(angle);
+        double[,] rotateZ = Matrix.RotateZ(angle);
+
+        double[,] translate = Matrix.Translation(0, 0, abstand);
+
+        double[,] worldMatrix = Matrix.Identety();
+        worldMatrix = Matrix.MultiplyMatrix(worldMatrix, translate);
+        worldMatrix = Matrix.MultiplyMatrix(worldMatrix, rotateX);
+        worldMatrix = Matrix.MultiplyMatrix(worldMatrix, rotateY);
+        worldMatrix = Matrix.MultiplyMatrix(worldMatrix, rotateZ);
+
+        return worldMatrix;
+    }
+    public static Vektor toVektor(double[,] a)
+    {
+            return new Vektor(a[0, 0], a[1, 0], a[2, 0], a[3, 0]);
     }
 }
 
