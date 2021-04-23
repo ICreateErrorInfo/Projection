@@ -108,7 +108,7 @@ namespace Projection
                     lightDirection = Vektor.Normalise(lightDirection);
 
                     double dp        = Vektor.DotProduct(normal, lightDirection);
-                    var    grayValue = Convert.ToByte(Math.Abs(dp * 250));
+                    var    grayValue = Convert.ToByte(Math.Abs(dp * Byte.MaxValue));
                     col = Color.FromArgb(250, grayValue, grayValue, grayValue);
 
                     Vektor projectedPoint1 = PerspectiveProjectionMatrix(Load.importedTriangles[i].tp1);
