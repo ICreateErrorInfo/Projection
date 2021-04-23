@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Windows;
@@ -10,6 +11,10 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+
+using Microsoft.Win32;
+
+using Path = System.IO.Path;
 
 namespace Projection
 {
@@ -33,12 +38,26 @@ namespace Projection
 
             _drawingSurface = new DrawingSurface();
             MainGrid.Children.Add(_drawingSurface.Surface);
-            Load.obj(loadPath);
+            
+            ShowOpenFile();
 
             _timer = new DispatcherTimer();
             _timer.Tick += Update;
             _timer.Interval = TimeSpan.FromMilliseconds(5);
             _timer.Start();
+        }
+
+        void ShowOpenFile() 
+        {
+            var ofn = new OpenFileDialog 
+            {
+                Filter           = "Object files (*.obj)|*.obj",
+                InitialDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? ""
+            };
+            if (ofn.ShowDialog() == true) {
+                Load.obj(ofn.FileName);
+                Load.obj(loadPath);
+            }
         }
 
         protected override void OnKeyDown(KeyEventArgs e)
