@@ -56,7 +56,6 @@ namespace Projection
             };
             if (ofn.ShowDialog() == true) {
                 Load.obj(ofn.FileName);
-                Load.obj(loadPath);
             }
         }
 
