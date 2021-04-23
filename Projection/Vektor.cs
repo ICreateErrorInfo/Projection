@@ -31,9 +31,9 @@ namespace Projection {
         public double Z {get;}
         public double W {get;}
 
-        public static double Length(Vektor v)
+        public double Length()
         {
-            return Math.Sqrt(DotProduct(v, v));
+            return Math.Sqrt(DotProduct(this, this));
         }
         public static double DotProduct(Vektor v1, Vektor v2)
         {
@@ -45,11 +45,13 @@ namespace Projection {
         {
             return v1 * v2;
         }
-        public static Vektor Normalise(Vektor v)
-        {
-            double l = Length(v);
-            return new Vektor(v.X / l, v.Y / l, v.Z / l);
+
+        public Vektor Normalise() {
+            double l = Length();
+            return new Vektor(X / l, Y / l, Z / l);
         }
+
+       
         public static Vektor CrossProduct(Vektor v1, Vektor v2)
         {
             Vektor v = new Vektor(
@@ -62,7 +64,7 @@ namespace Projection {
         public static Vektor CalcNormals(Vektor v1, Vektor v2)
         {
             Vektor v = CrossProduct(v1, v2);
-            v = Normalise(v);
+            v = v.Normalise();
             return new Vektor(
                 x: v.X,
                 y: v.Y,
@@ -104,7 +106,9 @@ namespace Projection {
                               v1.Z / v2.Z);
         }
 
-    
+        public override string ToString() => $"({X:F4}, {Y:F4}, {Z:F4})";
+
+
     }
 
 }

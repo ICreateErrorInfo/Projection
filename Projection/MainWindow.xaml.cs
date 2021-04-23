@@ -135,7 +135,7 @@ namespace Projection {
                 if (Vektor.DotProduct(normal, pointToCamera) > 0)
                 {
                     Vektor lightDirection = new Vektor(0, 0, -1);
-                    lightDirection = Vektor.Normalise(lightDirection);
+                    lightDirection = lightDirection.Normalise();
 
                     double dp        = Vektor.DotProduct(normal, lightDirection);
                     var    grayValue = Convert.ToByte(Math.Abs(dp * Byte.MaxValue));

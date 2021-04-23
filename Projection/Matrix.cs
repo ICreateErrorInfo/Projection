@@ -141,9 +141,9 @@ namespace Projection {
         public static double[,] PointAt(Vektor pos, Vektor target, Vektor up)
         {
             Vektor zaxis = target - pos;
-            zaxis = Vektor.Normalise(zaxis);
+            zaxis = zaxis.Normalise();
 
-            Vektor xaxis = Vektor.Normalise(Vektor.CrossProduct(up, zaxis));
+            Vektor xaxis = Vektor.CrossProduct(up, zaxis).Normalise();
 
             Vektor yaxis = Vektor.CrossProduct(zaxis, xaxis);
 
@@ -160,9 +160,9 @@ namespace Projection {
         public static double[,] LookAt(Vektor pos, Vektor target, Vektor up)
         {
             Vektor forward = target - pos;
-            forward = Vektor.Normalise(forward);
+            forward = forward.Normalise();
 
-            Vektor right = Vektor.Normalise(Vektor.CrossProduct(up, forward));
+            Vektor right = Vektor.CrossProduct(up, forward).Normalise();
 
             Vektor newUp = Vektor.CrossProduct(forward, right);
 
