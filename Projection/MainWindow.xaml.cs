@@ -59,21 +59,18 @@ namespace Projection {
                 _timer.IsEnabled ^= true;
                 e.Handled        =  true;
             }
-            base.OnKeyDown(e);
 
             if (e.Key == Key.Space)
             {
                 _camera   = new Vektor(x: _camera.X, y: _camera.Y + .1, z: _camera.Z);
                 e.Handled = true;
             }
-            base.OnKeyDown(e);
 
             if (e.Key == Key.LeftCtrl)
             {
                 _camera   = new Vektor(x: _camera.X, y: _camera.Y - .1, z: _camera.Z);
                 e.Handled = true;
             }
-            base.OnKeyDown(e);
 
 
             if (e.Key == Key.A)
@@ -81,7 +78,6 @@ namespace Projection {
                 _camera   = new Vektor(x: _camera.X + .1, y: _camera.Y, z: _camera.Z);
                 e.Handled = true;
             }
-            base.OnKeyDown(e);
 
             if (e.Key == Key.D)
             {
