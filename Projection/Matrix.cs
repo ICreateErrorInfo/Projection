@@ -122,13 +122,13 @@ namespace Projection {
 
             return matrix;
         }
-        public static double[,] WorldMatrix(double angle, double abstand)
+        public static double[,] WorldMatrix(Vektor angle, Vektor abstand)
         {
-            double[,] rotateX = RotateX(angle);
-            double[,] rotateY = RotateY(angle);
+            double[,] rotateX = RotateX(angle.X);
+            double[,] rotateY = RotateY(angle.Y);
             //double[,] rotateZ = Matrix.RotateZ(angle);
 
-            double[,] translate = Translation(0, 0, abstand);
+            double[,] translate = Translation(abstand.X, abstand.Y, abstand.Z);
 
             double[,] worldMatrix = Identety();
             worldMatrix = MultiplyMatrix(worldMatrix, translate);

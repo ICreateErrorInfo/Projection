@@ -15,7 +15,7 @@ namespace Projection {
     public partial class MainWindow : Window
     {
         double          abstand        = 6;
-        Vektor          _camera        = new Vektor(0,  10, 0);
+        Vektor          _camera        = new Vektor(0,  1.5, 0);
         readonly Vektor _lookDirCamera = new Vektor(0,  0,  1);
         readonly Vektor _up            = new Vektor( 0, -1,  0 );
 
@@ -63,14 +63,14 @@ namespace Projection {
 
             if (e.Key == Key.Space)
             {
-                _camera   = new Vektor(x: _camera.X, y: _camera.Y + .01, z: _camera.Z);
+                _camera   = new Vektor(x: _camera.X, y: _camera.Y + .1, z: _camera.Z);
                 e.Handled = true;
             }
             base.OnKeyDown(e);
 
             if (e.Key == Key.LeftCtrl)
             {
-                _camera   = new Vektor(x: _camera.X, y: _camera.Y - .01, z: _camera.Z);
+                _camera   = new Vektor(x: _camera.X, y: _camera.Y - .1, z: _camera.Z);
                 e.Handled = true;
             }
             base.OnKeyDown(e);
@@ -78,14 +78,14 @@ namespace Projection {
 
             if (e.Key == Key.A)
             {
-                _camera   = new Vektor(x: _camera.X + .01, y: _camera.Y, z: _camera.Z);
+                _camera   = new Vektor(x: _camera.X + .1, y: _camera.Y, z: _camera.Z);
                 e.Handled = true;
             }
             base.OnKeyDown(e);
 
             if (e.Key == Key.D)
             {
-                _camera   = new Vektor(x: _camera.X - .01, y: _camera.Y, z: _camera.Z);
+                _camera   = new Vektor(x: _camera.X - .1, y: _camera.Y, z: _camera.Z);
                 e.Handled = true;
             }
             base.OnKeyDown(e);
@@ -107,13 +107,11 @@ namespace Projection {
             List<Vektor> translatedVerts = new List<Vektor>();
             var target = _camera + _lookDirCamera;
 
-            double[,] matView = Matrix.PointAt(_camera, target, _up);
-
             for (int j = 0; j < import.Verts.Count; j++)
             {
                 Vektor element = import.Verts[j];
 
-                Vektor erg = Matrix.MultiplyVektor(Matrix.WorldMatrix(angle, abstand), element);
+                Vektor erg = Matrix.MultiplyVektor(Matrix.WorldMatrix(new Vektor(angle, angle, angle), new Vektor(0,0,abstand)), element);
 
                 translatedVerts.Add(erg);
             }
@@ -130,16 +128,16 @@ namespace Projection {
 
                 if (Vektor.DotProduct(pointToCamera, normal) < 0)
                 {
-                    Vektor lightDirection = new Vektor(0, 0, -1);
+                    Vektor lightDirection = _camera + new Vektor(0,0,-1);
                     lightDirection = lightDirection.Normalise();
 
                     double dp        = Vektor.DotProduct(normal, lightDirection);
                     var    grayValue = Convert.ToByte(Math.Abs(dp * Byte.MaxValue));
-                    var    col       = Color.FromArgb(250, grayValue, grayValue, grayValue);
+                    var    col       = Color.FromArgb(250, grayValue, grayValue, grayValue);                    
 
-                    var tp1 = Matrix.ToVektor(Matrix.MultiplyMatrix(matView, Vektor.ToMatrix(triangle.Tp1)));
-                    var tp2 = Matrix.ToVektor(Matrix.MultiplyMatrix(matView, Vektor.ToMatrix(triangle.Tp2)));
-                    var tp3 = Matrix.ToVektor(Matrix.MultiplyMatrix(matView, Vektor.ToMatrix(triangle.Tp3)));
+                    var tp1 = Matrix.ToVektor(Matrix.MultiplyMatrix(Matrix.WorldMatrix(new Vektor(0, 0, 0), _camera * new Vektor(-1,-1,-1)), Vektor.ToMatrix(triangle.Tp1)));
+                    var tp2 = Matrix.ToVektor(Matrix.MultiplyMatrix(Matrix.WorldMatrix(new Vektor(0, 0, 0), _camera * new Vektor(-1, -1, -1)), Vektor.ToMatrix(triangle.Tp2)));
+                    var tp3 = Matrix.ToVektor(Matrix.MultiplyMatrix(Matrix.WorldMatrix(new Vektor(0, 0, 0), _camera * new Vektor(-1, -1, -1)), Vektor.ToMatrix(triangle.Tp3)));
 
                     Triangle triViewed = new Triangle(tp1, tp2, tp3);
 
@@ -153,7 +151,7 @@ namespace Projection {
         }
         private Vektor PerspectiveProjectionMatrix(Vektor input)
         {
-            double fov  = 50;
+            double fov  = 90;
             double near = .1;
             double far  = 100;
 

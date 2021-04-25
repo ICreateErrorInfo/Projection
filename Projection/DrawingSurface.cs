@@ -12,7 +12,7 @@ namespace Projection {
             Surface                       = new Canvas();
             Surface.RenderTransformOrigin = new Point(0.5, 0.5);
             Surface.RenderTransform       = new ScaleTransform(1, 1);
-            Surface.Background            = Brushes.DarkGray;
+            Surface.Background            = Brushes.Black   ;
         }
         public Canvas Surface { get; }
         public void Clear()
@@ -61,8 +61,8 @@ namespace Projection {
                         MapPoint(p3)
                     },
                 
-                    Fill            = Brushes.Black,
-                    Stroke          = Brushes.Black,
+                    Fill            = brush,
+                    Stroke          = brush,
                     StrokeThickness = 0
                 };
 
