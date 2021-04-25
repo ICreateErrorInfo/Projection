@@ -5,42 +5,46 @@ using System.IO;
 
 namespace Projection {
 
-    class Load
+    class Import
     {
-        public readonly List<Vektor>   Verts             = new List<Vektor>();
-        public readonly List<Triangle> ImportedTriangles = new List<Triangle>();
+        readonly IReadOnlyList<string> _stringList;
 
-        readonly        List<string>   _stringList        = new List<string>();
+        public Import(IReadOnlyList<String> stringList, IReadOnlyList<Vektor> verts) {
+            _stringList = stringList;
+            Verts=verts;
+        }
 
-        public static Load Obj(string filename) {
+        public IReadOnlyList<Vektor> Verts {get;}
 
-            var load = new Load();
+        public static Import Obj(string filename) {
 
-            foreach (var myString in File.ReadAllLines(filename))
+            var stringList = File.ReadAllLines(filename);
+            var verts      = new List<Vektor>();
+
+            var provider = new NumberFormatInfo 
             {
-                load._stringList.Add(myString);
-            }
+                NumberDecimalSeparator = "."
+            };
 
-            for (int i = 0; i < load._stringList.Count; i++)
+            for (int i = 0; i < stringList.Length; i++)
             {
                 if (i > 1)
                 {
-                    string[] zeile = load._stringList[i].Split(' ');
+                    string[] zeile = stringList[i].Split(' ');
 
                     if (zeile[0] == "v")
                     {
-                        NumberFormatInfo provider = new NumberFormatInfo();
-                        provider.NumberDecimalSeparator = ".";
-                        load.Verts.Add(new Vektor(Convert.ToDouble(zeile[1], provider), Convert.ToDouble(zeile[2], provider), Convert.ToDouble(zeile[3], provider)));
+                        verts.Add(new Vektor(Convert.ToDouble(zeile[1], provider), Convert.ToDouble(zeile[2], provider), Convert.ToDouble(zeile[3], provider)));
                     }
                 }
             }
 
-            return load;
+            return new Import(stringList, verts);
         }
 
-        public void CreateTriangles(List<Vektor> vertsImp)
+        public List<Triangle> CreateTriangles(List<Vektor> vertsImp) 
         {
+            var triangles = new List<Triangle>();
             for (int i = 0; i < _stringList.Count; i++)
             {
                 if (i > 1)
@@ -49,10 +53,12 @@ namespace Projection {
 
                     if (zeile[0] == "f")
                     {
-                        ImportedTriangles.Add(new Triangle(vertsImp[Convert.ToInt32(zeile[1]) - 1], vertsImp[Convert.ToInt32(zeile[2]) - 1], vertsImp[Convert.ToInt32(zeile[3]) - 1]));
+                        triangles.Add(new Triangle(vertsImp[Convert.ToInt32(zeile[1]) - 1], vertsImp[Convert.ToInt32(zeile[2]) - 1], vertsImp[Convert.ToInt32(zeile[3]) - 1]));
                     }
                 }
             }
+
+            return triangles;
         }
     }
 

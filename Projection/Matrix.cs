@@ -143,7 +143,7 @@ namespace Projection {
             Vektor zaxis = target - pos;
             zaxis = zaxis.Normalise();
 
-            Vektor xaxis = Vektor.CrossProduct(up, zaxis).Normalise();
+            Vektor xaxis = Vektor.CrossProduct(up.Normalise(), zaxis);
 
             Vektor yaxis = Vektor.CrossProduct(zaxis, xaxis);
 

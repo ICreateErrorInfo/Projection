@@ -15,22 +15,20 @@ namespace Projection {
     public partial class MainWindow : Window
     {
         double          abstand        = 6;
-        Vektor          _camera        = new Vektor(0,  0, 0);
-        readonly Vektor _lookDirCamera = new Vektor(0,  0, 1);
-        readonly Vektor _up            = new Vektor( 0, 1, 0 );
-        readonly Vektor _target;
+        Vektor          _camera        = new Vektor(0,  10, 0);
+        readonly Vektor _lookDirCamera = new Vektor(0,  0,  1);
+        readonly Vektor _up            = new Vektor( 0, -1,  0 );
 
         double                           _currentAngle = 1;
         private readonly DispatcherTimer _timer;
         private readonly DrawingSurface  _drawingSurface;
 
-        readonly List<Load> _loads;
+        readonly List<Import> _loads;
 
         public MainWindow() {
-            _loads = new List<Load>();
+            _loads = new List<Import>();
             //Initialize
             InitializeComponent();
-            _target = _camera + _lookDirCamera;
 
             _drawingSurface = new DrawingSurface();
             MainGrid.Children.Add(_drawingSurface.Surface);
@@ -50,7 +48,7 @@ namespace Projection {
                 Filter = "Object files (*.obj)|*.obj",
             };
             if (ofn.ShowDialog() == true) {
-                _loads.Add(Load.Obj(ofn.FileName));
+                _loads.Add(Import.Obj(ofn.FileName));
             }
         }
 
@@ -92,47 +90,45 @@ namespace Projection {
             }
             base.OnKeyDown(e);
         }
+
         private void Update(object sender, EventArgs e)
         {
             //update
             _drawingSurface.Clear();
-
+           
             foreach (var load in _loads) {
                 Project(load, _currentAngle);
             }
-            
+
         }
 
-        void Project(Load load, double angle)
+        void Project(Import import, double angle)
         {
             List<Vektor> translatedVerts = new List<Vektor>();
+            var target = _camera + _lookDirCamera;
 
-            //double[,] matCamera = Matrix.PointAt(Camera, Target, up);
-            double[,] matView = Matrix.LookAt(_camera, _target, _up);
+            double[,] matView = Matrix.PointAt(_camera, target, _up);
 
-
-            for (int j = 0; j < load.Verts.Count; j++)
+            for (int j = 0; j < import.Verts.Count; j++)
             {
-                Vektor element = load.Verts[j];
+                Vektor element = import.Verts[j];
 
                 Vektor erg = Matrix.MultiplyVektor(Matrix.WorldMatrix(angle, abstand), element);
 
                 translatedVerts.Add(erg);
             }
 
-            load.CreateTriangles(translatedVerts);
-
-            for (int i = 0; i < load.ImportedTriangles.Count; i++)
+            foreach (var triangle in import.CreateTriangles(translatedVerts)) 
             {
-                
-                Vektor line1 = new Vektor(load.ImportedTriangles[i].Tp2, load.ImportedTriangles[i].Tp1);
-                Vektor line2 = new Vektor(load.ImportedTriangles[i].Tp2, load.ImportedTriangles[i].Tp3);
+
+                Vektor line1 = new Vektor(triangle.Tp2, triangle.Tp1);
+                Vektor line2 = new Vektor(triangle.Tp2, triangle.Tp3);
 
                 Vektor normal =Vektor.CalcNormals(line1, line2);
 
-                Vektor pointToCamera = load.ImportedTriangles[i].Tp1 - _camera;
+                Vektor pointToCamera = _camera - triangle.Tp1;
 
-                if (Vektor.DotProduct(normal, pointToCamera) > 0)
+                if (Vektor.DotProduct(pointToCamera, normal) < 0)
                 {
                     Vektor lightDirection = new Vektor(0, 0, -1);
                     lightDirection = lightDirection.Normalise();
@@ -141,9 +137,9 @@ namespace Projection {
                     var    grayValue = Convert.ToByte(Math.Abs(dp * Byte.MaxValue));
                     var    col       = Color.FromArgb(250, grayValue, grayValue, grayValue);
 
-                    var tp1 = Matrix.ToVektor(Matrix.MultiplyMatrix(matView, Vektor.ToMatrix(load.ImportedTriangles[i].Tp1)));
-                    var tp2 = Matrix.ToVektor(Matrix.MultiplyMatrix(matView, Vektor.ToMatrix(load.ImportedTriangles[i].Tp2)));
-                    var tp3 = Matrix.ToVektor(Matrix.MultiplyMatrix(matView, Vektor.ToMatrix(load.ImportedTriangles[i].Tp3)));
+                    var tp1 = Matrix.ToVektor(Matrix.MultiplyMatrix(matView, Vektor.ToMatrix(triangle.Tp1)));
+                    var tp2 = Matrix.ToVektor(Matrix.MultiplyMatrix(matView, Vektor.ToMatrix(triangle.Tp2)));
+                    var tp3 = Matrix.ToVektor(Matrix.MultiplyMatrix(matView, Vektor.ToMatrix(triangle.Tp3)));
 
                     Triangle triViewed = new Triangle(tp1, tp2, tp3);
 
