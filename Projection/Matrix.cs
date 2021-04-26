@@ -157,25 +157,47 @@ namespace Projection {
 
             return matrix;
         }
-        public static double[,] LookAt(Vektor pos, Vektor target, Vektor up)
+        public static double[,] RotateAround(Vektor pos, double pitch, double yaw)
         {
-            Vektor forward = target - pos;
-            forward = forward.Normalise();
+            double cosPitch = Math.Cos(pitch);
+            double sinPitch = Math.Sin(pitch);
+            double cosYaw = Math.Cos(yaw);
+            double sinYaw = Math.Sin(yaw);
 
-            Vektor right = Vektor.CrossProduct(up, forward).Normalise();
+            Vektor xaxis = new Vektor( cosYaw, 0, -sinYaw );
+            Vektor yaxis = new Vektor(sinYaw * sinPitch, cosPitch, cosYaw * sinPitch );
+            Vektor zaxis = new Vektor(sinYaw * cosPitch, -sinPitch, cosPitch * cosYaw );
 
-            Vektor newUp = Vektor.CrossProduct(forward, right);
-
-            double rechnung  = -(Vektor.DotProduct(right,   pos));
-            double rechnung1 = -(Vektor.DotProduct(newUp,   pos));
-            double rechnung2 = -(Vektor.DotProduct(forward, pos));
+            double rechnung  = -(Vektor.DotProduct(xaxis,   pos));
+            double rechnung1 = -(Vektor.DotProduct(yaxis,   pos));
+            double rechnung2 = -(Vektor.DotProduct(zaxis,   pos));
 
             double[,] matrix =
             {
-                {right.X, newUp.X, forward.X,0},
-                {right.Y, newUp.Y, forward.Y,0},
-                {right.Z, newUp.Z, forward.Z,0},
-                {rechnung, rechnung1, rechnung2, 1}
+                {xaxis.X,   yaxis.X,    zaxis.X,    rechnung},
+                {xaxis.Y,   yaxis.Y,    zaxis.Y,    rechnung1},
+                {xaxis.Z,   yaxis.Z,    zaxis.Z,    rechnung2},
+                {0,0,0,  1}
+            };
+
+            return matrix;
+        }
+        public static double[,] lookAt(Vektor pos, Vektor target, Vektor up)
+        {
+            Vektor zaxis = pos - target;
+            zaxis = zaxis.Normalise();
+
+            Vektor xaxis = Vektor.CrossProduct(up, zaxis);
+            xaxis = xaxis.Normalise();
+
+            Vektor yaxis = Vektor.CrossProduct(zaxis, xaxis);
+
+            double[,] matrix =
+            {
+                {xaxis.X, yaxis.X, zaxis.X, -Vektor.DotProduct(xaxis, pos)},
+                {xaxis.Y, yaxis.Y, zaxis.Y, -Vektor.DotProduct(yaxis, pos)},
+                {xaxis.Z, yaxis.Z, zaxis.Z, -Vektor.DotProduct(zaxis, pos)},
+                {0,0,0, 1}
             };
 
             return matrix;
