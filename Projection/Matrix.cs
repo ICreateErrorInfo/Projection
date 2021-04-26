@@ -149,35 +149,10 @@ namespace Projection {
 
             double[,] matrix =
             {
-                {xaxis.X, xaxis.Y, xaxis.Z,0},
-                {yaxis.X, yaxis.Y, yaxis.Z,0},
-                {zaxis.X, zaxis.Y, zaxis.Z,0},
-                {pos.X, pos.Y, pos.Z, 1}
-            };
-
-            return matrix;
-        }
-        public static double[,] RotateAround(Vektor pos, double pitch, double yaw)
-        {
-            double cosPitch = Math.Cos(pitch);
-            double sinPitch = Math.Sin(pitch);
-            double cosYaw = Math.Cos(yaw);
-            double sinYaw = Math.Sin(yaw);
-
-            Vektor xaxis = new Vektor( cosYaw, 0, -sinYaw );
-            Vektor yaxis = new Vektor(sinYaw * sinPitch, cosPitch, cosYaw * sinPitch );
-            Vektor zaxis = new Vektor(sinYaw * cosPitch, -sinPitch, cosPitch * cosYaw );
-
-            double rechnung  = -(Vektor.DotProduct(xaxis,   pos));
-            double rechnung1 = -(Vektor.DotProduct(yaxis,   pos));
-            double rechnung2 = -(Vektor.DotProduct(zaxis,   pos));
-
-            double[,] matrix =
-            {
-                {xaxis.X,   yaxis.X,    zaxis.X,    rechnung},
-                {xaxis.Y,   yaxis.Y,    zaxis.Y,    rechnung1},
-                {xaxis.Z,   yaxis.Z,    zaxis.Z,    rechnung2},
-                {0,0,0,  1}
+                {xaxis.X, xaxis.Y, xaxis.Z,pos.X},
+                {yaxis.X, yaxis.Y, yaxis.Z,pos.Y},
+                {zaxis.X, zaxis.Y, zaxis.Z,pos.Z},
+                {0,0,0, 1}
             };
 
             return matrix;
