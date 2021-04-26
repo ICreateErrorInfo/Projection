@@ -54,6 +54,45 @@ namespace Projection {
             }
         }
 
+        Point? _mouseStartPosition;
+        protected override void OnMouseDown(MouseButtonEventArgs e) 
+        {
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                CaptureMouse();
+                _mouseStartPosition = Mouse.GetPosition(this);
+                e.Handled           = true;
+            }
+            base.OnMouseDown(e);
+        }
+
+        protected override void OnMouseMove(MouseEventArgs e) 
+        {
+            if (_mouseStartPosition != null)
+            {
+                var startMousePos   = _mouseStartPosition.Value;
+                var currentMousePos = Mouse.GetPosition(this);
+
+                // TODO hier evtl. einen RichtungsVektor basteln?
+                e.Handled = true;
+            }
+            base.OnMouseMove(e);
+        }
+
+        protected override void OnLostMouseCapture(MouseEventArgs e) 
+        {
+            _mouseStartPosition=null;
+            base.OnLostMouseCapture(e);
+        }
+
+        protected override void OnMouseUp(MouseButtonEventArgs e) 
+        {
+            ReleaseMouseCapture();
+            _mouseStartPosition = null;
+            e.Handled           = true;
+            base.OnMouseUp(e);
+        }
+
         protected override void OnKeyDown(KeyEventArgs e)
         {
             if (e.Key == Key.P)
