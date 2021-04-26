@@ -140,10 +140,11 @@ namespace Projection {
         }
         public static double[,] PointAt(Vektor pos, Vektor target, Vektor up)
         {
-            Vektor zaxis = target - pos;
+            Vektor zaxis = pos - target;
             zaxis = zaxis.Normalise();
 
-            Vektor xaxis = Vektor.CrossProduct(up.Normalise(), zaxis);
+            Vektor xaxis = Vektor.CrossProduct(up, zaxis);
+            xaxis = xaxis.Normalise();
 
             Vektor yaxis = Vektor.CrossProduct(zaxis, xaxis);
 
@@ -157,22 +158,19 @@ namespace Projection {
 
             return matrix;
         }
-        public static double[,] lookAt(Vektor pos, Vektor target, Vektor up)
+        public static double[,] lookAt(double[,] m)
         {
-            Vektor zaxis = pos - target;
-            zaxis = zaxis.Normalise();
-
-            Vektor xaxis = Vektor.CrossProduct(up, zaxis);
-            xaxis = xaxis.Normalise();
-
-            Vektor yaxis = Vektor.CrossProduct(zaxis, xaxis);
+            Vektor eye = new Vektor(m[0,3], m[1,3], m[2,3]);
+            Vektor xaxis = new Vektor(m[0,0], m[0,1], m[0,2]);
+            Vektor yaxis = new Vektor(m[1,0], m[1,1], m[1,2]);
+            Vektor zaxis = new Vektor(m[2,0], m[2,1], m[2,2]);
 
             double[,] matrix =
             {
-                {xaxis.X, yaxis.X, zaxis.X, -Vektor.DotProduct(xaxis, pos)},
-                {xaxis.Y, yaxis.Y, zaxis.Y, -Vektor.DotProduct(yaxis, pos)},
-                {xaxis.Z, yaxis.Z, zaxis.Z, -Vektor.DotProduct(zaxis, pos)},
-                {0,0,0, 1}
+                {xaxis.X, yaxis.X, zaxis.X, -Vektor.DotProduct(xaxis, eye)},
+                {xaxis.Y, yaxis.Y, zaxis.Y, -Vektor.DotProduct(yaxis, eye)},
+                {xaxis.Z, yaxis.Z, zaxis.Z, -Vektor.DotProduct(zaxis, eye)},
+                {0,0,0,1}
             };
 
             return matrix;

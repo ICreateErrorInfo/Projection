@@ -77,12 +77,12 @@ namespace Projection {
 
             if (e.Key == Key.A)
             {
-                _camera   = _camera - new Vektor(_lookDirCamera.X + .1, 0,0);
+                _camera   += Matrix.MultiplyVektor(Matrix.RotateY(90), _lookDirCamera * new Vektor(.1, .1, .1));
                 e.Handled = true;
             }
             if (e.Key == Key.D)
             {
-                _camera   = new Vektor(x: _camera.X + .1, y: _camera.Y, z: _camera.Z);
+                _camera -= Matrix.MultiplyVektor(Matrix.RotateY(90), _lookDirCamera * new Vektor(.1,.1,.1));
                 e.Handled = true;
             }
 
@@ -99,12 +99,12 @@ namespace Projection {
 
             if (e.Key == Key.Left)
             {
-                Yaw -= 2;
+                Yaw += 1;
                 e.Handled = true;
             }
             if (e.Key == Key.Right)
             {
-                Yaw += 2;
+                Yaw -= 1;
                 e.Handled = true;
             }
             base.OnKeyDown(e);
@@ -129,8 +129,8 @@ namespace Projection {
             _lookDirCamera = Matrix.MultiplyVektor(matCameraRot, target);
             target = _camera + _lookDirCamera;
 
-            //double[,] matView = Matrix.RotateAround(_camera, 0, 0);
-            double[,] matView = Matrix.lookAt(_camera, target, _up);
+            double[,] matPointAt = Matrix.PointAt(_camera, target, _up);
+            double[,] matView = Matrix.lookAt(matPointAt);
 
             for (int j = 0; j < import.Verts.Count; j++)
             {
