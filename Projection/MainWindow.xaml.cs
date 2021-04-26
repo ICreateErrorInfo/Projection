@@ -19,6 +19,7 @@ namespace Projection {
         Vektor _lookDirCamera = new Vektor(0,  0,  1);
         readonly Vektor _up            = new Vektor( 0, -1,  0 );
         double Yaw;
+        double Pitch;
 
         double                           _currentAngle = 1;
         private readonly DispatcherTimer _timer;
@@ -107,6 +108,17 @@ namespace Projection {
                 Yaw -= 1;
                 e.Handled = true;
             }
+
+            if (e.Key == Key.Up)
+            {
+                Pitch += 1;
+                e.Handled = true;
+            }
+            if (e.Key == Key.Down)
+            {
+                Pitch -= 1;
+                e.Handled = true;
+            }
             base.OnKeyDown(e);
         }
 
@@ -125,8 +137,10 @@ namespace Projection {
         {
             List<Vektor> translatedVerts = new List<Vektor>();
             var target = new Vektor(0,0,1);
-            double[,] matCameraRot = Matrix.RotateY(Yaw);
-            _lookDirCamera = Matrix.MultiplyVektor(matCameraRot, target);
+            double[,] matCameraRotY = Matrix.RotateY(Yaw);
+            double[,] matCameraRotX = Matrix.RotateX(Pitch);
+            _lookDirCamera = Matrix.MultiplyVektor(matCameraRotY, target);
+            _lookDirCamera = Matrix.MultiplyVektor(matCameraRotX, _lookDirCamera);
             target = _camera + _lookDirCamera;
 
             double[,] matPointAt = Matrix.PointAt(_camera, target, _up);
