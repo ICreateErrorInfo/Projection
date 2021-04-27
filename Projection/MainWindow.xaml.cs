@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -175,6 +176,7 @@ namespace Projection {
 
         }
 
+        public delegate int Comparison<in T>(T x, T y);
         void Project(Import import, double angle)
         {
             List<Vektor> translatedVerts = new List<Vektor>();
@@ -198,7 +200,25 @@ namespace Projection {
                 translatedVerts.Add(erg);
             }
 
-            foreach (var triangle in import.CreateTriangles(translatedVerts)) 
+            List<Triangle> sortedTriangles = new List<Triangle>();
+            List<Triangle> sortedTrianglesF = new List<Triangle>();
+            Dictionary<Triangle, double> sort = new Dictionary<Triangle, double>();
+            foreach (var triangle in import.CreateTriangles(translatedVerts))
+            {
+                sort.Add(triangle, triangle.Tp1.Z + triangle.Tp2.Z + triangle.Tp3.Z / 3);
+            }
+
+            foreach (KeyValuePair<Triangle, double> author in sort.OrderBy(key => key.Value))
+            {
+                sortedTriangles.Add(author.Key);
+            }
+            for(int t = 0; t < sortedTriangles.Count; t++)
+            {
+
+                sortedTrianglesF.Add(sortedTriangles[sortedTriangles.Count - 1 - t]);
+            }
+
+            foreach (var triangle in sortedTrianglesF) 
             {
 
                 Vektor line1 = new Vektor(triangle.Tp2, triangle.Tp1);
