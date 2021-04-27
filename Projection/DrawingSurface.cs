@@ -23,8 +23,8 @@ namespace Projection {
         {
             var objLine = new Line
             {
-                Stroke = brush,
-                Fill   = brush
+                Stroke = Brushes.Black,
+                Fill   = Brushes.Black
             };
 
             var p1 = MapPoint(x);

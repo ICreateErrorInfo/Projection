@@ -175,6 +175,27 @@ namespace Projection {
 
             return matrix;
         }
+        public static double[,] FPSCamera(Vektor eye, double pitch, double yaw)
+        {
+            double cosPitch = Math.Cos(pitch);
+            double sinPitch = Math.Sin(pitch);
+            double cosYaw = Math.Cos(yaw);
+            double sinYaw = Math.Sin(yaw);
+
+            Vektor xaxis = new Vektor(cosYaw, 0, -sinYaw);
+            Vektor yaxis = new Vektor(sinYaw * sinPitch, cosPitch, cosYaw * sinPitch);
+            Vektor zaxis = new Vektor(sinYaw * cosPitch, -sinPitch, cosPitch * cosYaw);
+
+            double[,] matrix =
+            {
+                {xaxis.X, yaxis.X, zaxis.X, -Vektor.DotProduct(xaxis, eye)},
+                {xaxis.Y, yaxis.Y, zaxis.Y, -Vektor.DotProduct(yaxis, eye)},
+                {xaxis.Z, yaxis.Z, zaxis.Z, -Vektor.DotProduct(zaxis, eye)},
+                {0,0,0,1}
+            };
+
+            return matrix;
+        }
         public static Vektor ToVektor(double[,] a)
         {
             return new Vektor(a[0, 0], a[1, 0], a[2, 0], a[3, 0]);

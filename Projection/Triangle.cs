@@ -13,9 +13,9 @@
 
         }
 
-        public Vektor Tp1 {get;}
-        public Vektor Tp2 {get;}
-        public Vektor Tp3 {get;}
+        public Vektor Tp1 { get; set; }
+        public Vektor Tp2 { get; set; }
+        public Vektor Tp3 { get; set; }
     }
 
 }

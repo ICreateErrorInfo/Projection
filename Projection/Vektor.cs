@@ -37,21 +37,12 @@ namespace Projection {
         }
         public static double DotProduct(Vektor v1, Vektor v2)
         {
-            return v1.X * v2.X +
-                   v1.Y * v2.Y +
-                   v1.Z * v2.Z;
+            return v1.X * v2.X + v1.Y * v2.Y + v1.Z * v2.Z;
         }
-        public static Vektor DotProductVek(Vektor v1, Vektor v2)
-        {
-            return v1 * v2;
-        }
-
         public Vektor Normalise() {
             double l = Length();
             return new Vektor(X / l, Y / l, Z / l);
         }
-
-       
         public static Vektor CrossProduct(Vektor v1, Vektor v2)
         {
             Vektor v = new Vektor(
@@ -104,6 +95,54 @@ namespace Projection {
             return new Vektor(v1.X / v2.X,
                               v1.Y / v2.Y,
                               v1.Z / v2.Z);
+        }
+        public static bool operator >(Vektor v1, Vektor v2)
+        {
+            if(v1.X > v2.X && v1.Y > v2.Y && v1.Z > v2.Z)
+            {
+                return true;
+            }
+            return false;
+        }
+        public static bool operator <(Vektor v1, Vektor v2)
+        {
+            if(v1.X < v2.X && v1.Y < v2.Y && v1.Z < v2.Z)
+            {
+                return true;
+            }
+            return false;
+        }
+        public static bool operator ==(Vektor v1, Vektor v2)
+        {
+            if (v1.X == v2.X && v1.Y == v2.Y && v1.Z == v2.Z)
+            {
+                return true;
+            }
+            return false;
+        }
+        public static bool operator !=(Vektor v1, Vektor v2)
+        {
+            if (v1.X != v2.X && v1.Y != v2.Y && v1.Z != v2.Z)
+            {
+                return true;
+            }
+            return false;
+        }
+        public static bool operator >=(Vektor v1, Vektor v2)
+        {
+            if (v1 > v2 || v1 == v2)
+            {
+                return true;
+            }
+            return false;
+        }
+        public static bool operator <=(Vektor v1, Vektor v2)
+        {
+            if (v1 < v2 || v1 == v2)
+            {
+                return true;
+            }
+            return false;
         }
 
         public override string ToString() => $"({X:F4}, {Y:F4}, {Z:F4})";

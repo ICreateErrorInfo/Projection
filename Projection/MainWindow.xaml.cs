@@ -179,8 +179,9 @@ namespace Projection {
             double[,] matCameraRotY = Matrix.RotateY(Yaw);
             double[,] matCameraRotX = Matrix.RotateX(Pitch);
             _lookDirCamera = Matrix.MultiplyVektor(matCameraRotY, target);
-            _lookDirCamera = Matrix.MultiplyVektor(matCameraRotX, _lookDirCamera);
-            target = _camera + _lookDirCamera;
+            var _lookDirCamera1 = Matrix.MultiplyVektor(matCameraRotX, target);
+            target = _camera + _lookDirCamera + _lookDirCamera1;
+
 
             double[,] matPointAt = Matrix.PointAt(_camera, target, _up);
             double[,] matView = Matrix.lookAt(matPointAt);
@@ -223,11 +224,21 @@ namespace Projection {
 
                     Triangle triViewed = new Triangle(tp1 , tp2 , tp3 );
 
-                    Vektor projectedPoint1 = PerspectiveProjectionMatrix(triViewed.Tp1);
-                    Vektor projectedPoint2 = PerspectiveProjectionMatrix(triViewed.Tp2);
-                    Vektor projectedPoint3 = PerspectiveProjectionMatrix(triViewed.Tp3);
+                    int clippedTriangles = 0;
+                    Triangle[] clipped = new Triangle[2];
 
-                    _drawingSurface.Triangle(new Triangle(projectedPoint1, projectedPoint2, projectedPoint3), col);
+                    clippedTriangles = Clipping.Triangle_ClipAgainstPlane(new Vektor(0,0, -2.1), new Vektor(0,0,-1), triViewed);
+                    clipped[0] = Clipping.outTri1;
+                    clipped[1] = Clipping.outTri2;
+
+                    for (int n = 0; n < clippedTriangles; n++)
+                    {
+                        Vektor projectedPoint1 = PerspectiveProjectionMatrix(clipped[n].Tp1);
+                        Vektor projectedPoint2 = PerspectiveProjectionMatrix(clipped[n].Tp2);
+                        Vektor projectedPoint3 = PerspectiveProjectionMatrix(clipped[n].Tp3);
+
+                        _drawingSurface.Triangle(new Triangle(projectedPoint1, projectedPoint2, projectedPoint3), col);
+                    }
                 }
             }
         }
