@@ -20,6 +20,9 @@ namespace Projection {
         readonly Vektor _up            = new Vektor( 0, 1,  0 );
         double Yaw;
         double Pitch;
+        double fov = 90;
+        double near = .1;
+        double far = 10;
 
         double                           _currentAngle = 0;
         private readonly DispatcherTimer _timer;
@@ -105,12 +108,12 @@ namespace Projection {
 
             if (e.Key == Key.Space)
             {
-                _camera   = new Vektor(x: _camera.X, y: _camera.Y + .1, z: _camera.Z);
+                _camera   = new Vektor(x: _camera.X, y: _camera.Y - .1, z: _camera.Z);
                 e.Handled = true;
             }
             if (e.Key == Key.LeftCtrl)
             {
-                _camera   = new Vektor(x: _camera.X, y: _camera.Y - .1, z: _camera.Z);
+                _camera   = new Vektor(x: _camera.X, y: _camera.Y + .1, z: _camera.Z);
                 e.Handled = true;
             }
 
@@ -175,6 +178,9 @@ namespace Projection {
         void Project(Import import, double angle)
         {
             List<Vektor> translatedVerts = new List<Vektor>();
+            List<Triangle> projectedTriangles = new List<Triangle>();
+            List<Color> projectedTriColor = new List<Color>();
+
             Vektor target = new Vektor(0, 0, 1);
             double[,] matCameraRotY = Matrix.RotateY(Yaw);
             double[,] matCameraRotX = Matrix.RotateX(Pitch);
@@ -211,10 +217,6 @@ namespace Projection {
                     var    grayValue = Convert.ToByte(Math.Abs(dp * Byte.MaxValue));
                     var    col       = Color.FromArgb(250, grayValue, grayValue, grayValue);
 
-                    //var tp1 = Matrix.ToVektor(Matrix.MultiplyMatrix(Matrix.WorldMatrix(new Vektor(0, 0, 0), _camera * new Vektor(-1,-1,-1)), Vektor.ToMatrix(triangle.Tp1)));
-                    //var tp2 = Matrix.ToVektor(Matrix.MultiplyMatrix(Matrix.WorldMatrix(new Vektor(0, 0, 0), _camera * new Vektor(-1, -1, -1)), Vektor.ToMatrix(triangle.Tp2)));
-                    //var tp3 = Matrix.ToVektor(Matrix.MultiplyMatrix(Matrix.WorldMatrix(new Vektor(0, 0, 0), _camera * new Vektor(-1, -1, -1)), Vektor.ToMatrix(triangle.Tp3)));
-
                     var tp1 = Matrix.MultiplyVektor(matView, triangle.Tp1);
                     var tp2 = Matrix.MultiplyVektor(matView, triangle.Tp2);
                     var tp3 = Matrix.MultiplyVektor(matView, triangle.Tp3);
@@ -222,9 +224,9 @@ namespace Projection {
                     Triangle triViewed = new Triangle(tp1 , tp2 , tp3 );
 
                     int clippedTriangles = 0;
-                    Triangle[] clipped = new Triangle[2];
+                    Triangle[] clipped = new Triangle[4];
 
-                    clippedTriangles = Clipping.Triangle_ClipAgainstPlane(new Vektor(0,0, -2.1), new Vektor(0,0,-1), triViewed);
+                    clippedTriangles += Clipping.Triangle_ClipAgainstPlane(new Vektor(0,0, -near), new Vektor(0,0,-1), triViewed);
                     clipped[0] = Clipping.outTri1;
                     clipped[1] = Clipping.outTri2;
 
@@ -234,17 +236,71 @@ namespace Projection {
                         Vektor projectedPoint2 = PerspectiveProjectionMatrix(clipped[n].Tp2);
                         Vektor projectedPoint3 = PerspectiveProjectionMatrix(clipped[n].Tp3);
 
-                        _drawingSurface.Triangle(new Triangle(projectedPoint1, projectedPoint2, projectedPoint3), col);
+                        projectedTriangles.Add(new Triangle(projectedPoint1, projectedPoint2, projectedPoint3));
+                        projectedTriColor.Add(col);
                     }
                 }
+            }
+
+            foreach (Triangle triToRaster in projectedTriangles)
+            {
+                int c = 0;
+                Triangle[] clipped = new Triangle[2];
+                List<Triangle> listTriangles = new List<Triangle>();
+                Color col = projectedTriColor[c];
+                listTriangles.Add(triToRaster);
+                int newTriangles = 1;
+
+                for (int p = 0; p < 4; p++)
+                {
+                    int TrisToAdd = 0;
+                    while (newTriangles > 0)
+                    {
+                        Triangle test = listTriangles[0];
+                        listTriangles.RemoveAt(0);
+                        newTriangles--;
+
+                        switch (p)
+                        {
+                            case 0:
+                                TrisToAdd = Clipping.Triangle_ClipAgainstPlane(new Vektor(0, (-_drawingSurface.Surface.ActualHeight / 2)/50, 0), new Vektor(0, 1, 0), test);
+                                clipped[0] = Clipping.outTri1;
+                                clipped[1] = Clipping.outTri2;
+                                break;
+                            case 1:
+                                TrisToAdd = Clipping.Triangle_ClipAgainstPlane(new Vektor(0, (_drawingSurface.Surface.ActualHeight / 2) / 50, 0), new Vektor(0, -1, 0), test);
+                                clipped[0] = Clipping.outTri1;
+                                clipped[1] = Clipping.outTri2;
+                                break;
+                            case 2:
+                                TrisToAdd = Clipping.Triangle_ClipAgainstPlane(new Vektor((-_drawingSurface.Surface.ActualWidth / 2) / 50, 0, 0), new Vektor(1, 0, 0), test);
+                                clipped[0] = Clipping.outTri1;
+                                clipped[1] = Clipping.outTri2;
+                                break;
+                            case 3:
+                                TrisToAdd = Clipping.Triangle_ClipAgainstPlane(new Vektor((_drawingSurface.Surface.ActualWidth / 2) / 50, 0, 0), new Vektor(-1, 0, 0), test);
+                                clipped[0] = Clipping.outTri1;
+                                clipped[1] = Clipping.outTri2;
+                                break;
+                        }
+
+                        for (int w = 0; w < TrisToAdd; w++)
+                        {
+                            listTriangles.Add(clipped[w]);
+                        }
+                    }
+                    newTriangles = listTriangles.Count;
+                }
+
+                for (int i = 0; i < listTriangles.Count; i++)
+                {
+                    _drawingSurface.Triangle(listTriangles[i], col);
+                }
+                c++;
             }
         }
         private Vektor PerspectiveProjectionMatrix(Vektor input)
         {
-            double fov  = 90;
-            double near = .1;
-            double far  = 100;
-
             // ReSharper disable once PossibleLossOfFraction
             double aspectRation = 1920 / 1080; // auflösung Bildschirm
 
