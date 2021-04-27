@@ -158,22 +158,32 @@ namespace Projection {
 
             return matrix;
         }
-        public static double[,] lookAt(double[,] m)
+        public static double[,] lookAt(Vektor pos, Vektor target, Vektor up)
         {
-            Vektor eye = new Vektor(m[0,3], m[1,3], m[2,3]);
-            Vektor xaxis = new Vektor(m[0,0], m[0,1], m[0,2]);
-            Vektor yaxis = new Vektor(m[1,0], m[1,1], m[1,2]);
-            Vektor zaxis = new Vektor(m[2,0], m[2,1], m[2,2]);
+            Vektor zaxis = pos - target;
+            zaxis = zaxis.Normalise();
 
-            double[,] matrix =
+            Vektor xaxis = Vektor.CrossProduct(up, zaxis);
+            xaxis = xaxis.Normalise();
+
+            Vektor yaxis = Vektor.CrossProduct(zaxis, xaxis);
+
+            double[,] orientation =
             {
-                {xaxis.X, yaxis.X, zaxis.X, -Vektor.DotProduct(xaxis, eye)},
-                {xaxis.Y, yaxis.Y, zaxis.Y, -Vektor.DotProduct(yaxis, eye)},
-                {xaxis.Z, yaxis.Z, zaxis.Z, -Vektor.DotProduct(zaxis, eye)},
+                {xaxis.X, yaxis.X, zaxis.X, 0},
+                {xaxis.Y, yaxis.Y, zaxis.Y, 0},
+                {xaxis.Z, yaxis.Z, zaxis.Z, 0},
                 {0,0,0,1}
             };
+            double[,] translation =
+            {
+                {1,0,0,-pos.X},
+                {0,1,0,-pos.Y},
+                {0,0,1,-pos.Z},
+                {0,0,0,1 }
+            };
 
-            return matrix;
+            return Matrix.MultiplyMatrix(orientation, translation);
         }
         public static double[,] FPSCamera(Vektor eye, double pitch, double yaw)
         {

@@ -14,14 +14,14 @@ namespace Projection {
     /// </summary>
     public partial class MainWindow : Window
     {
-        double          abstand        = 6;
+        double          abstand        = 5;
         Vektor          _camera        = new Vektor(0,0,0);
-        Vektor _lookDirCamera = new Vektor(0,  0,  1);
-        readonly Vektor _up            = new Vektor( 0, -1,  0 );
+        Vektor _lookDirCamera = new Vektor(0,  0,  -1);
+        readonly Vektor _up            = new Vektor( 0, 1,  0 );
         double Yaw;
         double Pitch;
 
-        double                           _currentAngle = 1;
+        double                           _currentAngle = 0;
         private readonly DispatcherTimer _timer;
         private readonly DrawingSurface  _drawingSurface;
 
@@ -101,7 +101,7 @@ namespace Projection {
                 e.Handled        =  true;
             }
 
-            Vektor Forward = _lookDirCamera * new Vektor(.1, .1, .1);
+            Vektor Forward = _lookDirCamera * new Vektor(.1,.1,-.1);
 
             if (e.Key == Key.Space)
             {
@@ -117,23 +117,23 @@ namespace Projection {
 
             if (e.Key == Key.A)
             {
-                _camera   += Matrix.MultiplyVektor(Matrix.RotateY(90), _lookDirCamera * new Vektor(.1, .1, .1));
+                _camera += Matrix.MultiplyVektor(Matrix.RotateY(90), _lookDirCamera * new Vektor(.1,.1,-.1));
                 e.Handled = true;
             }
             if (e.Key == Key.D)
             {
-                _camera -= Matrix.MultiplyVektor(Matrix.RotateY(90), _lookDirCamera * new Vektor(.1,.1,.1));
+                _camera -= Matrix.MultiplyVektor(Matrix.RotateY(90), _lookDirCamera * new Vektor(.1, .1, -.1));
                 e.Handled = true;
             }
 
             if (e.Key == Key.W)
             {
-                _camera = _camera + Forward;
+                _camera -=  Forward;
                 e.Handled = true;
             }
             if (e.Key == Key.S)
             {
-                _camera = _camera - Forward;
+                _camera +=  Forward;
                 e.Handled = true;
             }
 
@@ -175,16 +175,13 @@ namespace Projection {
         void Project(Import import, double angle)
         {
             List<Vektor> translatedVerts = new List<Vektor>();
-            var target = new Vektor(0,0,1);
+            Vektor target = new Vektor(0, 0, 1);
             double[,] matCameraRotY = Matrix.RotateY(Yaw);
             double[,] matCameraRotX = Matrix.RotateX(Pitch);
             _lookDirCamera = Matrix.MultiplyVektor(matCameraRotY, target);
-            var _lookDirCamera1 = Matrix.MultiplyVektor(matCameraRotX, target);
-            target = _camera + _lookDirCamera + _lookDirCamera1;
+            target = _camera + _lookDirCamera;
 
-
-            double[,] matPointAt = Matrix.PointAt(_camera, target, _up);
-            double[,] matView = Matrix.lookAt(matPointAt);
+            double[,] matView = Matrix.lookAt(_camera, target, _up);
 
             for (int j = 0; j < import.Verts.Count; j++)
             {
